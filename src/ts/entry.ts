@@ -1,7 +1,8 @@
-// The following code is temporary and will be replaced when actually building the engine. The shader and the voxel utilities however, will probably be kept.
+// TODO: The following code is temporary and will be replaced when actually building the engine. The shader and the voxel utilities however, will probably be kept.
 import {mat4, vec3} from "gl-matrix";
 import VOXEL_VERTEX_SOURCE from "./../res/voxel.vert";
 import VOXEL_FRAG_SOURCE from "./../res/voxel.frag";
+import {VoxelChunkRenderer} from "./helpers/voxelChunkRenderer";
 
 const canvas = document.createElement("canvas");
 const gl = canvas.getContext("webgl")!;
@@ -40,68 +41,20 @@ function loadProgram(vertex_source: string, fragment_source: string) {
 const render_program = loadProgram(VOXEL_VERTEX_SOURCE, VOXEL_FRAG_SOURCE);
 
 // Setup the chunk data array buffer
-function encodeVertexPos(x: number, y: number, z: number) {
-    const CHUNK_SIZE = 8;
-    return x + y * CHUNK_SIZE + z * (CHUNK_SIZE * CHUNK_SIZE);
-}
+const array_buffer = gl.createBuffer()!;
+const my_chunk = new VoxelChunkRenderer(gl, array_buffer);
+(window as any).foof = my_chunk;
+(window as any).gloo = gl;
+my_chunk.putVoxel([0, 0, 0]);
+my_chunk.putVoxel([0, 1, 0]);
+my_chunk.putVoxel([0, 2, 0]);
+my_chunk.putVoxel([1, 0, 0]);
+my_chunk.putVoxel([2, 0, 0]);
+my_chunk.putVoxel([0, 0, 1]);
+my_chunk.putVoxel([0, 0, 2]);
+
+// Setup vertex accessing
 const vslot_data = gl.getAttribLocation(render_program, "vertex_data");
-const array_buffer = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, array_buffer);  // VAP() and bufferData() operate on the currently bound array buffer
-gl.bufferData(gl.ARRAY_BUFFER, Uint16Array.from([
-    // Front
-    encodeVertexPos(0, 0, 0),
-    encodeVertexPos(1, 0, 0),
-    encodeVertexPos(1, 1, 0),
-
-    encodeVertexPos(0, 0, 0),
-    encodeVertexPos(1, 1, 0),
-    encodeVertexPos(0, 1, 0),
-
-    // Back
-    encodeVertexPos(0, 0, 1),
-    encodeVertexPos(1, 1, 1),
-    encodeVertexPos(1, 0, 1),
-
-    encodeVertexPos(0, 0, 1),
-    encodeVertexPos(0, 1, 1),
-    encodeVertexPos(1, 1, 1),
-
-    // Left side
-    encodeVertexPos(0, 0, 0),
-    encodeVertexPos(0, 1, 1),
-    encodeVertexPos(0, 0, 1),
-
-    encodeVertexPos(0, 0, 0),
-    encodeVertexPos(0, 1, 0),
-    encodeVertexPos(0, 1, 1),
-
-    // Right side
-    encodeVertexPos(1, 0, 0),
-    encodeVertexPos(1, 0, 1),
-    encodeVertexPos(1, 1, 1),
-
-    encodeVertexPos(1, 0, 0),
-    encodeVertexPos(1, 1, 1),
-    encodeVertexPos(1, 1, 0),
-
-    // Bottom side
-    encodeVertexPos(0, 0, 0),
-    encodeVertexPos(1, 0, 1),
-    encodeVertexPos(1, 0, 0),
-
-    encodeVertexPos(0, 0, 0),
-    encodeVertexPos(0, 0, 1),
-    encodeVertexPos(1, 0, 1),
-
-    // Top side
-    encodeVertexPos(0, 1, 0),
-    encodeVertexPos(1, 1, 0),
-    encodeVertexPos(1, 1, 1),
-
-    encodeVertexPos(0, 1, 0),
-    encodeVertexPos(1, 1, 1),
-    encodeVertexPos(0, 1, 1),
-]), gl.STATIC_DRAW);
 gl.enableVertexAttribArray(vslot_data);  // Tells the vertex shader to use the VAP instead of a constant.
 gl.vertexAttribPointer(vslot_data, 1, gl.UNSIGNED_SHORT, false, 0, 0);  // Specify how to lookup vertices at the "vertex slot"
 
@@ -121,10 +74,11 @@ const upos_view = gl.getUniformLocation(render_program, "view");
 const camera_pos: vec3 = [0.5, 0.5, 4];
 const camera_ang = [0, 0];
 const keys_down: Record<string, true> = {};
+
 function draw() {
     requestAnimationFrame(draw);
 
-    // Update TODO: Looking needs to be clamped and x needs to wrap to avoid precision degredation
+    // Update TODO: Looking needs to be clamped and x needs to wrap to avoid precision degradation
     if (keys_down["ArrowLeft"]) {
         camera_ang[0] += Math.PI * 0.02;
     }
@@ -179,8 +133,9 @@ function draw() {
     gl.uniformMatrix4fv(upos_view, false, view_mat);
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.drawArrays(gl.TRIANGLES, 0, 6 * 6);
+    my_chunk.draw();
 }
+
 draw();
 
 console.log("Ready!");

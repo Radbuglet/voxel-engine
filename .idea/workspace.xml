@@ -1,7 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="c6ba1446-251a-45af-8ed8-c7481b100f3c" name="Default Changelist" comment="" />
+    <list default="true" id="c6ba1446-251a-45af-8ed8-c7481b100f3c" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/ts/helpers/voxelChunkRenderer.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dictionaries/radbu.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dictionaries/radbu.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/res/voxel.vert" beforeDir="false" afterPath="$PROJECT_DIR$/src/res/voxel.vert" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ts/entry.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/ts/entry.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ts/helpers/glSetBuffer.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/ts/helpers/glSetBuffer.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ts/helpers/typescript/aliases.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/ts/helpers/typescript/aliases.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tsconfig.json" beforeDir="false" afterPath="$PROJECT_DIR$/tsconfig.json" afterDir="false" />
+    </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -16,8 +27,13 @@
       </list>
     </option>
   </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
   <component name="ProjectId" id="1Z7jwNW5gOEPz8zCHE1SJvThzzj" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="PropertiesComponent">
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="nodejs_package_manager_path" value="npm" />
@@ -25,8 +41,10 @@
   </component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="C:\Users\radbu\Documents\Personal\WebstormProjects\voxel-engine\src\ts\helpers\typescript" />
       <recent name="C:\Users\radbu\Documents\Personal\WebstormProjects\voxel-engine\src\ts\helpers" />
+      <recent name="C:\Users\radbu\Documents\Personal\WebstormProjects\voxel-engine\src\ts\helpers\gl" />
+      <recent name="C:\Users\radbu\Documents\Personal\WebstormProjects\voxel-engine\src\ts\voxel-client" />
+      <recent name="C:\Users\radbu\Documents\Personal\WebstormProjects\voxel-engine\src\ts\helpers\typescript" />
     </key>
   </component>
   <component name="RunDashboard">
@@ -72,11 +90,25 @@
       <workItem from="1584227034563" duration="6568000" />
       <workItem from="1584237210671" duration="431000" />
       <workItem from="1584238127340" duration="3455000" />
-      <workItem from="1584281028906" duration="803000" />
+      <workItem from="1584281028906" duration="4572000" />
+      <workItem from="1584290068213" duration="11953000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="1" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="COLUMN_ORDER" />
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
 </project>

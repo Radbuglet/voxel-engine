@@ -1,6 +1,7 @@
 // Welcome to the intersection between GPU programming and algorithm programming ie. debugging hell
 import {GlCtx} from "./typescript/aliases";
 
+type IdealCapacityGetter = (required_capacity: number) => number;
 type SetBufferElemInternal = {
     cpu_index: number
     gpu_root_idx: number,
@@ -9,10 +10,9 @@ type SetBufferElemInternal = {
 };
 export type SetBufferElem = Readonly<SetBufferElemInternal>;
 
-// TODO: Optimize resize bandwidth with WebGl2 GPU copying
-// TODO: Make resizing more efficient on the CPU
-// TODO: Make abstraction WebGl error tolerant.
-// TODO: Optimize using DataViews.
+// TODO: Make addElement() WebGl error tolerant.
+// TODO: Optimize buffer handling
+// TODO: Test; review; document. (IMPORTANT!)
 export class GlSetBuffer {
     /**
      * @desc represents the number of bytes in the array. Also serves as the index to the root of any concat operation.
@@ -26,29 +26,43 @@ export class GlSetBuffer {
     private stored_data_mirror: SetBufferElemInternal[] = [];
 
     /**
-     * @desc PRECONDITION: The buffer this class operates on must be empty and is only operated on by this manager.
-     * The buffer's usage should be specified as DYNAMIC_DRAW as this usage mode will be used when we reallocate the buffer during resizing.
-     * @param gl: A WebGL context
-     * @param elem_word_size: The size in bytes of each element.
-     * @param buffer_capacity: The current capacity of the buffer.
-     * @param get_ideal_capacity: Returns the ideal capacity for the buffer for a given required capacity.
-     * Useful for allocating a bit more than necessary so that element addition doesn't always require reallocation.
+     * @desc returns the number of members of the set. This is the number of words in the set, not the number of bytes.
      */
-    constructor(
-        private readonly gl: GlCtx,
-        private readonly elem_word_size: number,
-        private buffer_capacity: number,
-        private readonly get_ideal_capacity: (required_capacity: number) => number
-    ) {}
+    get element_count() {
+        return this.stored_data_mirror.length;
+    }
 
     /**
-     * @desc Adds one or more elements to the set and returns their CPU mirrored references. The method will resize the buffer
+     * @desc Constructs a GlSetManager for a buffer. No buffer is explicitly passed but for all operations who have the
+     * precondition that "the target buffer is bound to the ARRAY_BUFFER register", the buffer you decided to manage with
+     * this class must be that "target buffer".
+     * The buffer's usage should be specified as DYNAMIC_DRAW as this usage mode will be used when we reallocate the buffer
+     * during resizing.
+     * PRECONDITION: The buffer this class operates on must only be operated on by this manager.
+     *
+     * @param elem_word_size: The size in bytes of each element. Must be an integer!
+     * @param buffer_capacity: The current capacity of the buffer.
+     * @param get_ideal_capacity: A function which returns the ideal capacity in elements for the buffer given required
+     * capacity (also in elements count). Useful for allocating a bit more than necessary so that element addition doesn't always
+     * require reallocation.
+     */
+    constructor(
+        private readonly elem_word_size: number,
+        private buffer_capacity: number,
+        private readonly get_ideal_capacity: IdealCapacityGetter
+    ) {
+    }
+
+    /**
+     *desc Adds one or more elements to the set and returns their CPU mirrored references. The method will resize the buffer
      * if the buffer's capacity is too small to accommodate the new elements.
      * PRECONDITION: This method expects that the target buffer is bound to the ARRAY_BUFFER register.
+     * @param gl: The WebGL context used by the target buffer.
      * @param elements_data: An array of element buffers. Each element buffer must be of the proper word size!
+     * Each element buffer may not be mutated after being added to the set.
      */
-    addData(elements_data: ArrayBuffer[]): SetBufferElem[] {
-        const { gl, stored_data_mirror, elem_word_size } = this;
+    addElements(gl: GlCtx, elements_data: ArrayBufferView[]): SetBufferElem[] {
+        const { elem_word_size, stored_data_mirror } = this;
         const bytes_required = elements_data.length * this.elem_word_size;
         type StrategyState = {
             type: "resize"
@@ -70,33 +84,35 @@ export class GlSetBuffer {
         // Add the new elements to the CPU mirror; generate reference array for external uses.
         const element_references = elements_data.map(elem_buffer => {
             // Validate this element
-            console.assert(elem_buffer.byteLength == elem_word_size);
+            console.assert(elem_buffer.byteLength == elem_word_size, "Fatal error. Element isn't of valid word size. The buffer may have been corrupted.");
+            const elem_buffer_data = elem_buffer.buffer;
 
             // Store element to CPU buffer mirror
-           const elem_ref: SetBufferElemInternal =  {
-               cpu_index: stored_data_mirror.length,
-               gpu_root_idx: this.storage_write_idx,
-               buffer_val: elem_buffer,
-               owner_set: this
-           };
-           this.stored_data_mirror.push(elem_ref);
-           this.storage_write_idx += elem_word_size;
+            const elem_ref: SetBufferElemInternal = {
+                cpu_index: this.element_count,
+                gpu_root_idx: this.storage_write_idx,
+                buffer_val: elem_buffer_data,
+                owner_set: this
+            };
+            stored_data_mirror.push(elem_ref);
+            this.storage_write_idx += elem_word_size;
 
-           // Copy element to continuous block of memory if we're using the bufferSubData appending strategy.
+            // Copy element to continuous block of memory if we're using the bufferSubData appending strategy.
             if (strategy_state.type == "sub_add") {
-                const byte_view = new Uint8Array(elem_buffer);
-                const { buffer_copy_idx, data_write_buffer } = strategy_state;
+                const byte_view = new Uint8Array(elem_buffer_data);
+                const {buffer_copy_idx, data_write_buffer} = strategy_state;
                 for (let byte = 0; byte < elem_word_size; byte++) {
                     data_write_buffer[buffer_copy_idx + byte] = byte_view[byte];
                 }
+                strategy_state.buffer_copy_idx += elem_word_size;
             }
 
-           return elem_ref;
+            return elem_ref;
         });
 
         // Update GPU buffer
         if (strategy_state.type == "resize") {  // Resize array. By rewriting array data to the new location, we effectively upload the new data so we can stop here.
-            this.resizeCapacity();
+            this.resizeCapacity(gl);
         } else {  // There's still capacity meaning we should just do a bufferSubData() modify
             gl.bufferSubData(gl.ARRAY_BUFFER, strategy_state.data_write_root, strategy_state.data_write_buffer);
         }
@@ -107,10 +123,11 @@ export class GlSetBuffer {
     /**
      * @desc Removes an element from the set. No buffer capacity resizing is ever done by this method.
      * PRECONDITION: This method expects that the target buffer is bound to the ARRAY_BUFFER register.
+     * @param gl: The WebGL context used by the target buffer.
      * @param removed_elem: The element to be removed.
      */
-    removeData(removed_elem: SetBufferElemInternal) {
-        const { gl, stored_data_mirror } = this;
+    removeElement(gl: GlCtx, removed_elem: SetBufferElemInternal) {
+        const {stored_data_mirror} = this;
         console.assert(removed_elem.owner_set == this);
         const last_element_index = stored_data_mirror.length - 1;
         const last_element = stored_data_mirror[last_element_index];
@@ -130,11 +147,14 @@ export class GlSetBuffer {
     /**
      * @desc forces the buffer to be resized to the ideal capacity, as determined by the get_ideal_capacity() hook.
      * This method will never resize the buffer below the length of the data stored.
+     * PRECONDITION: This method expects that the target buffer is bound to the ARRAY_BUFFER register.
+     * @param gl: The WebGL context used by the target buffer.
+     * @throws gl.OUT_OF_MEMORY
      */
-    resizeCapacity() {
-        const { gl, elem_word_size } = this;
+    resizeCapacity(gl: GlCtx) {
+        const { elem_word_size, element_count } = this;
         // Figure out new buffer capacity size
-        const capacity = Math.max(this.storage_write_idx, this.get_ideal_capacity(this.storage_write_idx));
+        const capacity = elem_word_size * Math.floor(Math.max(element_count, this.get_ideal_capacity(element_count)));  // Capacity is in bytes, despite get_ideal_capacity returning words.
         if (capacity == this.buffer_capacity) return;  // Nothing will change.
 
         // Generate data buffer to upload
@@ -152,5 +172,18 @@ export class GlSetBuffer {
 
         // Upload it!
         gl.bufferData(gl.ARRAY_BUFFER, rewrite_data_buffer, gl.DYNAMIC_DRAW);
+        this.buffer_capacity = capacity;
+    }
+
+    /**
+     * @desc Prepares the buffer by initializing the buffer's capacity to the ideal capacity and constructs a new GlSetBuffer
+     * for the provided buffer. All arguments except "gl" are relayed to the constructor. See the constructor for more
+     * information on the requirements for the parameters.
+     * PRECONDITION: The target buffer (implied. No actual buffer is ever passed) must be bound to the ARRAY_BUFFER WebGL register.
+     */
+    static prepareBufferAndConstruct(gl: GlCtx, elem_word_size: number, get_ideal_capacity: IdealCapacityGetter) {
+        const initial_capacity = Math.floor(get_ideal_capacity(0)) * elem_word_size;
+        gl.bufferData(gl.ARRAY_BUFFER, initial_capacity, gl.DYNAMIC_DRAW);
+        return new GlSetBuffer(elem_word_size, initial_capacity, get_ideal_capacity);
     }
 }
