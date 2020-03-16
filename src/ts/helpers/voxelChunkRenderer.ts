@@ -5,25 +5,24 @@ import {vec3} from "gl-matrix";
 // Static
 const CHUNK_SIZE = 9;  // Must be the same as the constant in the vertex shader.
 const CHUNK_SIZE_SQUARED = CHUNK_SIZE * CHUNK_SIZE;
+const FACE_AXIS_ENCODED = [1, CHUNK_SIZE, CHUNK_SIZE_SQUARED];
 function encodeVertexPos(pos: vec3) {
     return pos[0] + pos[1] * CHUNK_SIZE + pos[2] * CHUNK_SIZE_SQUARED;
 }
+function makeFaceTemplate(face_bases_vec: vec3[], face_axis: Vec3Axis) {
+    const face_bases_encoded = face_bases_vec.map(encodeVertexPos);
+    const face_opp_rel_encoded = FACE_AXIS_ENCODED[face_axis];
 
-function encodeVertexPosRelative(base: vec3, origin: vec3, face_axis: Vec3Axis, face: 0 | 1) {
-    const pos: vec3 = [0, 0, 0];
-    vec3.add(pos, base, origin);
-    pos[face_axis] += face;
-    return encodeVertexPos(pos);
-}
-function makeFaceTemplate(face_bases: vec3[], face_axis: Vec3Axis) {  // TODO: This is still too inefficient.
     return (target: Uint16Array, target_offset: number, origin: vec3, face: 0 | 1) => {
-        target[target_offset]     = encodeVertexPosRelative(face_bases[0], origin, face_axis, face);
-        target[target_offset + 1] = encodeVertexPosRelative(face_bases[face == 0 ? 2 : 1], origin, face_axis, face);
-        target[target_offset + 2] = encodeVertexPosRelative(face_bases[face == 0 ? 1 : 2], origin, face_axis, face);
+        const common_vec_encoded = encodeVertexPos(origin) + (face == 1 ? face_opp_rel_encoded : 0);
 
-        target[target_offset + 3] = encodeVertexPosRelative(face_bases[3], origin, face_axis, face);
-        target[target_offset + 4] = encodeVertexPosRelative(face_bases[face == 0 ? 5 : 4], origin, face_axis, face);
-        target[target_offset + 5] = encodeVertexPosRelative(face_bases[face == 0 ? 4 : 5], origin, face_axis, face);
+        target[target_offset]     = common_vec_encoded + face_bases_encoded[0];
+        target[target_offset + 1] = common_vec_encoded + face_bases_encoded[face == 0 ? 2 : 1];
+        target[target_offset + 2] = common_vec_encoded + face_bases_encoded[face == 0 ? 1 : 2];
+
+        target[target_offset + 3] = common_vec_encoded + face_bases_encoded[3];
+        target[target_offset + 4] = common_vec_encoded + face_bases_encoded[face == 0 ? 5 : 4];
+        target[target_offset + 5] = common_vec_encoded + face_bases_encoded[face == 0 ? 4 : 5];
     }
 }
 const FACE_TEMPLATES = {
@@ -82,12 +81,14 @@ export class VoxelChunkRenderer {
         const { gl, buffer } = this;
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         const elements = new Uint16Array(6 * 6);
+        console.time();
         FACE_TEMPLATES.X(elements, 0, pos, 0);
         FACE_TEMPLATES.X(elements, 6, pos, 1);
         FACE_TEMPLATES.Y(elements, 12, pos, 0);
         FACE_TEMPLATES.Y(elements, 18, pos, 1);
         FACE_TEMPLATES.Z(elements, 24, pos, 0);
         FACE_TEMPLATES.Z(elements, 30, pos, 1);
+        console.timeEnd();
         this.face_set_manager.addElements(gl, elements);
     }
 }
