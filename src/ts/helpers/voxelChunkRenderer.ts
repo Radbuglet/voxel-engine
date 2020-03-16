@@ -2,40 +2,41 @@ import {GlSetBuffer, SetBufferElem} from "./glSetBuffer";
 import {GlCtx, Vec3Axis} from "./typescript/aliases";
 import {vec3} from "gl-matrix";
 
-// Static  TODO: Clean up face system.
-const CHUNK_SIZE = 9;  // Must be the same as the constant in the vertex shader.
+// Static
+const CHUNK_SIZE = 10;  // Must be the same as the constant in the vertex shader.
 const CHUNK_SIZE_SQUARED = CHUNK_SIZE * CHUNK_SIZE;
-const FACE_AXIS_ENCODED = [1, CHUNK_SIZE, CHUNK_SIZE_SQUARED];
+const FACE_UNIT_AXIS_ENCODED = [1, CHUNK_SIZE, CHUNK_SIZE_SQUARED];
 function encodeVertexPos(pos: vec3) {
     return pos[0] + pos[1] * CHUNK_SIZE + pos[2] * CHUNK_SIZE_SQUARED;
 }
-type FaceTemplate = {
-    append_face: (target: Uint16Array, target_offset: number, encoded_origin: number, face: 0 | 1) => void,
-    encode_face: (encoded_origin: number, face: 0 | 1) => number
+
+type FaceAxis = {
+    append_face: (target: Uint16Array, target_offset: number, encoded_origin: number, sign: 0 | 1) => void,
+    encode_face: (encoded_origin: number, sign: 0 | 1) => number
 }
-function makeFaceTemplate(face_bases_vec: vec3[], face_axis: Vec3Axis): FaceTemplate {
+function makeFaceAxis(face_bases_vec: vec3[], face_axis: Vec3Axis): FaceAxis {
     const face_bases_encoded = face_bases_vec.map(encodeVertexPos);
-    const face_opp_rel_encoded = FACE_AXIS_ENCODED[face_axis];
+    const face_opp_rel_encoded = FACE_UNIT_AXIS_ENCODED[face_axis];
 
     return {
-        append_face(target, target_offset, encoded_origin, face) {
-            const common_vec_encoded = encoded_origin + (face == 1 ? face_opp_rel_encoded : 0);
+        append_face(target, target_offset, encoded_origin, sign) {
+            const common_vec_encoded = encoded_origin + (sign == 1 ? face_opp_rel_encoded : 0);
 
             target[target_offset]     = common_vec_encoded + face_bases_encoded[0];
-            target[target_offset + 1] = common_vec_encoded + face_bases_encoded[face == 0 ? 2 : 1];
-            target[target_offset + 2] = common_vec_encoded + face_bases_encoded[face == 0 ? 1 : 2];
+            target[target_offset + 1] = common_vec_encoded + face_bases_encoded[sign == 0 ? 2 : 1];
+            target[target_offset + 2] = common_vec_encoded + face_bases_encoded[sign == 0 ? 1 : 2];
 
             target[target_offset + 3] = common_vec_encoded + face_bases_encoded[3];
-            target[target_offset + 4] = common_vec_encoded + face_bases_encoded[face == 0 ? 5 : 4];
-            target[target_offset + 5] = common_vec_encoded + face_bases_encoded[face == 0 ? 4 : 5];
+            target[target_offset + 4] = common_vec_encoded + face_bases_encoded[sign == 0 ? 5 : 4];
+            target[target_offset + 5] = common_vec_encoded + face_bases_encoded[sign == 0 ? 4 : 5];
         },
         encode_face(encoded_origin, face) {
             return encoded_origin + (face == 1 ? face_opp_rel_encoded : 0) + face_axis / 10;
         }
     }
 }
-const FACE_TEMPLATES = {
-    X: makeFaceTemplate([
+const FACE_AXIS = {
+    X: makeFaceAxis([
         // Tri 1
         [0, 0, 0],
         [0, 1, 1],
@@ -46,7 +47,7 @@ const FACE_TEMPLATES = {
         [0, 1, 0],
         [0, 1, 1]
     ], 0),
-    Y: makeFaceTemplate([
+    Y: makeFaceAxis([
         // Tri 1
         [0, 0, 0],
         [1, 0, 1],
@@ -57,7 +58,7 @@ const FACE_TEMPLATES = {
         [0, 0, 1],
         [1, 0, 1]
     ], 1),
-    Z: makeFaceTemplate([
+    Z: makeFaceAxis([
         // Tri 1
         [0, 0, 0],
         [1, 0, 0],
@@ -69,28 +70,27 @@ const FACE_TEMPLATES = {
         [0, 1, 0]
     ], 2)
 };
-const FACE_RELATIVE = {
-    nx: -encodeVertexPos([1, 0, 0]),
-    ny: -encodeVertexPos([0, 1, 0]),
-    nz: -encodeVertexPos([0, 0, 1]),
-    px: encodeVertexPos([1, 0, 0]),
-    py: encodeVertexPos([0, 1, 0]),
-    pz: encodeVertexPos([0, 0, 1])
+const FACES: Record<"nx" | "ny" | "nz" | "px" | "py" | "pz", HandledFace> = {
+    nx: { relative: -FACE_UNIT_AXIS_ENCODED[0], axis: FACE_AXIS.X, axis_sign: 0 },
+    px: { relative:  FACE_UNIT_AXIS_ENCODED[0], axis: FACE_AXIS.X, axis_sign: 1 },
+    ny: { relative: -FACE_UNIT_AXIS_ENCODED[1], axis: FACE_AXIS.Y, axis_sign: 0 },
+    py: { relative:  FACE_UNIT_AXIS_ENCODED[1], axis: FACE_AXIS.Y, axis_sign: 1 },
+    nz: { relative: -FACE_UNIT_AXIS_ENCODED[2], axis: FACE_AXIS.Z, axis_sign: 0 },
+    pz: { relative:  FACE_UNIT_AXIS_ENCODED[2], axis: FACE_AXIS.Z, axis_sign: 1 },
 };
 
 type HandledFace = {
-    id: number,
     relative: number,
-    template: FaceTemplate,
-    template_face: 0 | 1
+    axis: FaceAxis,
+    axis_sign: 0 | 1
 };
-const HANDLED_FACES: HandledFace[] = [
-    { id: 0, relative: FACE_RELATIVE.nx, template: FACE_TEMPLATES.X, template_face: 0 },
-    { id: 1, relative: FACE_RELATIVE.px, template: FACE_TEMPLATES.X, template_face: 1 },
-    { id: 2, relative: FACE_RELATIVE.ny, template: FACE_TEMPLATES.Y, template_face: 0 },
-    { id: 3, relative: FACE_RELATIVE.py, template: FACE_TEMPLATES.Y, template_face: 1 },
-    { id: 4, relative: FACE_RELATIVE.nz, template: FACE_TEMPLATES.Z, template_face: 0 },
-    { id: 5, relative: FACE_RELATIVE.pz, template: FACE_TEMPLATES.Z, template_face: 1 }
+const FACE_LIST: HandledFace[] = [
+    FACES.nx,
+    FACES.ny,
+    FACES.nz,
+    FACES.px,
+    FACES.py,
+    FACES.pz
 ];
 
 // Class  TODO: Decouple headless chunk data management and rendering.
@@ -119,9 +119,9 @@ export class VoxelChunkRenderer {
         // Determine faces to create and delete all unnecessary faces.
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         const additional_faces: { face_def: HandledFace, key: number }[] = [];
-        for (const face_def of HANDLED_FACES) {
+        for (const face_def of FACE_LIST) {
             const has_neighbor = voxels.has(encoded_pos + face_def.relative);
-            const key = face_def.template.encode_face(encoded_pos, face_def.template_face);
+            const key = face_def.axis.encode_face(encoded_pos, face_def.axis_sign);
 
             if (has_neighbor) {  // Since this block used to be air and this face has a neighbor, we must delete that face.
                 face_set_manager.removeElement(gl, faces.get(key)!);
@@ -138,7 +138,7 @@ export class VoxelChunkRenderer {
         let offset = 0;
         for (const additional_face of additional_faces) {
             const { face_def } = additional_face;
-            face_def.template.append_face(elements, offset, encoded_pos, face_def.template_face);
+            face_def.axis.append_face(elements, offset, encoded_pos, face_def.axis_sign);
             offset += 6;
         }
 

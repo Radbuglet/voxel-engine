@@ -1,6 +1,6 @@
 // TODO: Specify floating precision
 // Configuration constants
-const float CHUNK_SIZE = 9.0;  // The chunk size is always 1 more than the amount of blocks in the chunk.
+const float CHUNK_SIZE = 10.0;  // The chunk size is always 2 more than the amount of blocks in the chunk.
 const float VOXEL_WORLD_SIZE = 1.0;
 
 // Uniforms
