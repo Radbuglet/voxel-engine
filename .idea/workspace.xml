@@ -3,8 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="c6ba1446-251a-45af-8ed8-c7481b100f3c" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/ts/entry.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/ts/entry.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/ts/helpers/voxelChunkRenderer.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/ts/helpers/voxelChunkRenderer.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/index.html" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -87,7 +86,7 @@
       <workItem from="1584290068213" duration="12660000" />
       <workItem from="1584366989198" duration="7552000" />
       <workItem from="1584378862207" duration="551000" />
-      <workItem from="1584382293870" duration="8894000" />
+      <workItem from="1584382293870" duration="9074000" />
     </task>
     <servers />
   </component>
