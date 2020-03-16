@@ -1,6 +1,6 @@
 // TODO: Specify floating precision
 // Configuration constants
-const float CHUNK_SIZE = 8.0;
+const float CHUNK_SIZE = 9.0;  // The chunk size is always 1 more than the amount of blocks in the chunk.
 const float VOXEL_WORLD_SIZE = 1.0;
 
 // Uniforms
@@ -9,7 +9,7 @@ uniform mat4 projection;
 uniform mat4 view;
 
 // Vertex attributes
-attribute vec2 vertex_data;  // (pos_idx, material_idx) TODO: We can optimize this even further and store everything in one `short` component.
+attribute vec2 vertex_data;  // (pos_idx, material_idx)
 #define pos_idx vertex_data.x
 #define mat_idx vertex_data.y
 

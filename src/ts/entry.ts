@@ -52,6 +52,9 @@ my_chunk.putVoxel([1, 0, 0]);
 my_chunk.putVoxel([2, 0, 0]);
 my_chunk.putVoxel([0, 0, 1]);
 my_chunk.putVoxel([0, 0, 2]);
+my_chunk.putVoxel([3, 3, 3]);
+my_chunk.putVoxel([3, 2, 3]);
+my_chunk.putVoxel([3, 1, 3]);
 
 // Setup vertex accessing
 const vslot_data = gl.getAttribLocation(render_program, "vertex_data");

@@ -1,18 +1,18 @@
 // Welcome to the intersection between GPU programming and algorithm programming ie. debugging hell
-import {GlCtx} from "./typescript/aliases";
+import {GlCtx, TypedArray} from "./typescript/aliases";
+import {readTypedArrayBytes} from "./typedArrays";
 
 type IdealCapacityGetter = (required_capacity: number) => number;
 type SetBufferElemInternal = {
-    cpu_index: number
+    owner_set?: GlSetBuffer,
+    cpu_index: number,
     gpu_root_idx: number,
-    buffer_val: ArrayBuffer,
-    owner_set?: GlSetBuffer
+    subarray_buffer: TypedArray
 };
 export type SetBufferElem = Readonly<SetBufferElemInternal>;
 
 // TODO: Make addElement() WebGl error tolerant.
-// TODO: Optimize buffer handling
-// TODO: Test; review; document. (IMPORTANT!)
+// TODO: Test; review; document everything. (IMPORTANT!)
 export class GlSetBuffer {
     /**
      * @desc represents the number of bytes in the array. Also serves as the index to the root of any concat operation.
@@ -58,63 +58,35 @@ export class GlSetBuffer {
      * if the buffer's capacity is too small to accommodate the new elements.
      * PRECONDITION: This method expects that the target buffer is bound to the ARRAY_BUFFER register.
      * @param gl: The WebGL context used by the target buffer.
-     * @param elements_data: An array of element buffers. Each element buffer must be of the proper word size!
+     * @param elements_view: An buffer containing the elements to add in contiguous memory. Each element in the buffer is
+     * of the specified word size and thus the buffer's length must be a multiple of the word size.
      * Each element buffer may not be mutated after being added to the set.
      */
-    addElements(gl: GlCtx, elements_data: ArrayBufferView[]): SetBufferElem[] {
+    addElements(gl: GlCtx, elements_view: TypedArray): SetBufferElem[] {
         const { elem_word_size, stored_data_mirror } = this;
-        const bytes_required = elements_data.length * this.elem_word_size;
-        type StrategyState = {
-            type: "resize"
-        } | {
-            type: "sub_add",
-            data_write_root: number,
-            data_write_buffer: Uint8Array,
-            buffer_copy_idx: number
-        };
-        const strategy_state: StrategyState = this.storage_write_idx + bytes_required > this.buffer_capacity ? {
-            type: "resize"
-        } : {
-            type: "sub_add",
-            data_write_root: this.storage_write_idx,
-            data_write_buffer: new Uint8Array(bytes_required),
-            buffer_copy_idx: 0
-        };
+        const insertion_root_idx = this.storage_write_idx;
+        console.assert(elements_view.byteLength % elem_word_size == 0);
 
         // Add the new elements to the CPU mirror; generate reference array for external uses.
-        const element_references = elements_data.map(elem_buffer => {
-            // Validate this element
-            console.assert(elem_buffer.byteLength == elem_word_size, "Fatal error. Element isn't of valid word size. The buffer may have been corrupted.");
-            const elem_buffer_data = elem_buffer.buffer;
-
-            // Store element to CPU buffer mirror
+        const element_references: SetBufferElem[] = [];
+        const word_size_in_view = elem_word_size / elements_view.BYTES_PER_ELEMENT;
+        for (let elem_idx = 0; elem_idx < elements_view.byteLength / elements_view.BYTES_PER_ELEMENT; elem_idx += elem_word_size / elements_view.BYTES_PER_ELEMENT) {
             const elem_ref: SetBufferElemInternal = {
-                cpu_index: this.element_count,
+                owner_set: this,
+                cpu_index: stored_data_mirror.length,
                 gpu_root_idx: this.storage_write_idx,
-                buffer_val: elem_buffer_data,
-                owner_set: this
+                subarray_buffer: elements_view.subarray(elem_idx, elem_idx + word_size_in_view),
             };
-            stored_data_mirror.push(elem_ref);
+            this.stored_data_mirror.push(elem_ref);
+            element_references.push(elem_ref);
             this.storage_write_idx += elem_word_size;
-
-            // Copy element to continuous block of memory if we're using the bufferSubData appending strategy.
-            if (strategy_state.type == "sub_add") {
-                const byte_view = new Uint8Array(elem_buffer_data);
-                const {buffer_copy_idx, data_write_buffer} = strategy_state;
-                for (let byte = 0; byte < elem_word_size; byte++) {
-                    data_write_buffer[buffer_copy_idx + byte] = byte_view[byte];
-                }
-                strategy_state.buffer_copy_idx += elem_word_size;
-            }
-
-            return elem_ref;
-        });
+        }
 
         // Update GPU buffer
-        if (strategy_state.type == "resize") {  // Resize array. By rewriting array data to the new location, we effectively upload the new data so we can stop here.
-            this.resizeCapacity(gl);
-        } else {  // There's still capacity meaning we should just do a bufferSubData() modify
-            gl.bufferSubData(gl.ARRAY_BUFFER, strategy_state.data_write_root, strategy_state.data_write_buffer);
+        if (this.storage_write_idx > this.buffer_capacity) {  // We need to resize the array.
+            this.resizeCapacity(gl);  // By rewriting array data to the new location, we effectively upload the new data so we can stop here.
+        } else {  // There's still space in the buffer meaning we should just modify using bufferSubData()
+            gl.bufferSubData(gl.ARRAY_BUFFER, insertion_root_idx, elements_view);
         }
 
         return element_references;
@@ -133,7 +105,7 @@ export class GlSetBuffer {
         const last_element = stored_data_mirror[last_element_index];
 
         // Move last element of array into the slot where the removed element resided to fill the gap. No need to remove the old last_element values.
-        if (last_element != removed_elem) gl.bufferSubData(gl.ARRAY_BUFFER, removed_elem.gpu_root_idx, last_element.buffer_val);
+        if (last_element != removed_elem) gl.bufferSubData(gl.ARRAY_BUFFER, removed_elem.gpu_root_idx, last_element.subarray_buffer);
         last_element.gpu_root_idx = removed_elem.gpu_root_idx;
 
         // Update CPU mirror
@@ -162,7 +134,7 @@ export class GlSetBuffer {
         {
             let write_idx = 0;
             for (const element of this.stored_data_mirror) {
-                const element_data_view = new Uint8Array(element.buffer_val);  // Uint8Array is just a view class used to read the contents of a buffer. Nothing (besides the viewer) is being allocated here.
+                const element_data_view = readTypedArrayBytes(element.subarray_buffer);
                 for (let byte = 0; byte < element_data_view.byteLength; byte++) {
                     rewrite_data_buffer[write_idx + byte] = element_data_view[byte];
                 }

@@ -1,10 +1,9 @@
-// TODO: This entire file is temp.
 import {GlSetBuffer} from "./glSetBuffer";
 import {GlCtx, Vec3Axis} from "./typescript/aliases";
 import {vec3} from "gl-matrix";
 
 // Static
-const CHUNK_SIZE = 8;
+const CHUNK_SIZE = 9;  // Must be the same as the constant in the vertex shader.
 const CHUNK_SIZE_SQUARED = CHUNK_SIZE * CHUNK_SIZE;
 function encodeVertexPos(pos: vec3) {
     return pos[0] + pos[1] * CHUNK_SIZE + pos[2] * CHUNK_SIZE_SQUARED;
@@ -16,29 +15,15 @@ function encodeVertexPosRelative(base: vec3, origin: vec3, face_axis: Vec3Axis, 
     pos[face_axis] += face;
     return encodeVertexPos(pos);
 }
-function makeFaceTemplate(face_bases: vec3[], face_axis: Vec3Axis) {
-    return (origin: vec3, face: 0 | 1) => {
-        if (face == 0) {
-            return new Uint16Array([
-                encodeVertexPosRelative(face_bases[0], origin, face_axis, face),
-                encodeVertexPosRelative(face_bases[2], origin, face_axis, face),
-                encodeVertexPosRelative(face_bases[1], origin, face_axis, face),
+function makeFaceTemplate(face_bases: vec3[], face_axis: Vec3Axis) {  // TODO: This is still too inefficient.
+    return (target: Uint16Array, target_offset: number, origin: vec3, face: 0 | 1) => {
+        target[target_offset]     = encodeVertexPosRelative(face_bases[0], origin, face_axis, face);
+        target[target_offset + 1] = encodeVertexPosRelative(face_bases[face == 0 ? 2 : 1], origin, face_axis, face);
+        target[target_offset + 2] = encodeVertexPosRelative(face_bases[face == 0 ? 1 : 2], origin, face_axis, face);
 
-                encodeVertexPosRelative(face_bases[3], origin, face_axis, face),
-                encodeVertexPosRelative(face_bases[5], origin, face_axis, face),
-                encodeVertexPosRelative(face_bases[4], origin, face_axis, face),
-            ]);
-        } else {
-            return new Uint16Array([
-                encodeVertexPosRelative(face_bases[0], origin, face_axis, face),
-                encodeVertexPosRelative(face_bases[1], origin, face_axis, face),
-                encodeVertexPosRelative(face_bases[2], origin, face_axis, face),
-
-                encodeVertexPosRelative(face_bases[3], origin, face_axis, face),
-                encodeVertexPosRelative(face_bases[4], origin, face_axis, face),
-                encodeVertexPosRelative(face_bases[5], origin, face_axis, face),
-            ]);
-        }
+        target[target_offset + 3] = encodeVertexPosRelative(face_bases[3], origin, face_axis, face);
+        target[target_offset + 4] = encodeVertexPosRelative(face_bases[face == 0 ? 5 : 4], origin, face_axis, face);
+        target[target_offset + 5] = encodeVertexPosRelative(face_bases[face == 0 ? 4 : 5], origin, face_axis, face);
     }
 }
 const FACE_TEMPLATES = {
@@ -90,22 +75,19 @@ export class VoxelChunkRenderer {
     draw() {
         const { gl, buffer } = this;
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-        gl.drawArrays(gl.TRIANGLES, 0, this.face_set_manager.element_count * 6);  // There are 6 vertices per face. Draw uses vertex count. Thus, we multiply by 6.
+        gl.drawArrays(gl.TRIANGLES, 0, this.face_set_manager.element_count * 6);  // There are 6 vertices per face. Draw uses vertex count. Therefore, we multiply by 6.
     }
 
-    putVoxel(pos: vec3) {
+    putVoxel(pos: vec3) {  // TODO: Temp
         const { gl, buffer } = this;
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-        console.time();
-        const elements = [  // TODO: Optimize face templates.
-            FACE_TEMPLATES.X(pos, 0),
-            FACE_TEMPLATES.X(pos, 1),
-            FACE_TEMPLATES.Y(pos, 0),
-            FACE_TEMPLATES.Y(pos, 1),
-            FACE_TEMPLATES.Z(pos, 0),
-            FACE_TEMPLATES.Z(pos, 1)
-        ];
-        console.timeEnd();
+        const elements = new Uint16Array(6 * 6);
+        FACE_TEMPLATES.X(elements, 0, pos, 0);
+        FACE_TEMPLATES.X(elements, 6, pos, 1);
+        FACE_TEMPLATES.Y(elements, 12, pos, 0);
+        FACE_TEMPLATES.Y(elements, 18, pos, 1);
+        FACE_TEMPLATES.Z(elements, 24, pos, 0);
+        FACE_TEMPLATES.Z(elements, 30, pos, 1);
         this.face_set_manager.addElements(gl, elements);
     }
 }

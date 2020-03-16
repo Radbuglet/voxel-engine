@@ -2,16 +2,13 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="c6ba1446-251a-45af-8ed8-c7481b100f3c" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/ts/helpers/voxelChunkRenderer.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dictionaries/radbu.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dictionaries/radbu.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/ts/helpers/typedArrays.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/index.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/res/voxel.vert" beforeDir="false" afterPath="$PROJECT_DIR$/src/res/voxel.vert" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/ts/entry.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/ts/entry.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/ts/helpers/glSetBuffer.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/ts/helpers/glSetBuffer.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/ts/helpers/typescript/aliases.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/ts/helpers/typescript/aliases.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tsconfig.json" beforeDir="false" afterPath="$PROJECT_DIR$/tsconfig.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ts/helpers/voxelChunkRenderer.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/ts/helpers/voxelChunkRenderer.ts" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -91,7 +88,8 @@
       <workItem from="1584237210671" duration="431000" />
       <workItem from="1584238127340" duration="3455000" />
       <workItem from="1584281028906" duration="4572000" />
-      <workItem from="1584290068213" duration="11953000" />
+      <workItem from="1584290068213" duration="12660000" />
+      <workItem from="1584366989198" duration="7412000" />
     </task>
     <servers />
   </component>
