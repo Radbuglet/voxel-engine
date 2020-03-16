@@ -45,16 +45,16 @@ const array_buffer = gl.createBuffer()!;
 const my_chunk = new VoxelChunkRenderer(gl, array_buffer);
 (window as any).my_chunk = my_chunk;
 (window as any).gl = gl;
-my_chunk.putVoxel([0, 0, 0]);
-my_chunk.putVoxel([0, 1, 0]);
-my_chunk.putVoxel([0, 2, 0]);
-my_chunk.putVoxel([1, 0, 0]);
-my_chunk.putVoxel([2, 0, 0]);
-my_chunk.putVoxel([0, 0, 1]);
-my_chunk.putVoxel([0, 0, 2]);
-my_chunk.putVoxel([3, 3, 3]);
-my_chunk.putVoxel([3, 2, 3]);
-my_chunk.putVoxel([3, 1, 3]);
+my_chunk.placeVoxel([0, 0, 0]);
+my_chunk.placeVoxel([0, 1, 0]);
+my_chunk.placeVoxel([0, 2, 0]);
+my_chunk.placeVoxel([1, 0, 0]);
+my_chunk.placeVoxel([2, 0, 0]);
+my_chunk.placeVoxel([0, 0, 1]);
+my_chunk.placeVoxel([0, 0, 2]);
+my_chunk.placeVoxel([3, 3, 3]);
+my_chunk.placeVoxel([3, 2, 3]);
+my_chunk.placeVoxel([3, 1, 3]);
 
 // Setup vertex accessing
 const vslot_data = gl.getAttribLocation(render_program, "vertex_data");
@@ -124,7 +124,7 @@ function draw() {
     }
 
     const forward = [Math.sin(camera_ang[0]), Math.cos(camera_ang[0])];
-    camera_pos[0] += ((forward[0] * -heading[0]) + (forward[1] * heading[1])) * 0.1;
+    camera_pos[0] += ((forward[0] * -heading[0]) + (forward[1] * heading[1])) * 0.1;  // TODO: Normalize movement vector.
     camera_pos[2] += ((forward[1] * -heading[0]) + (forward[0] * -heading[1])) * 0.1;
 
     // Render
