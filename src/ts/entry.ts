@@ -43,8 +43,8 @@ const render_program = loadProgram(VOXEL_VERTEX_SOURCE, VOXEL_FRAG_SOURCE);
 // Setup the chunk data array buffer
 const array_buffer = gl.createBuffer()!;
 const my_chunk = new VoxelChunkRenderer(gl, array_buffer);
-(window as any).foof = my_chunk;
-(window as any).gloo = gl;
+(window as any).my_chunk = my_chunk;
+(window as any).gl = gl;
 my_chunk.putVoxel([0, 0, 0]);
 my_chunk.putVoxel([0, 1, 0]);
 my_chunk.putVoxel([0, 2, 0]);

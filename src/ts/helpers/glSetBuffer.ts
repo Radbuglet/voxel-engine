@@ -99,7 +99,7 @@ export class GlSetBuffer {
      * @param removed_elem: The element to be removed.
      */
     removeElement(gl: GlCtx, removed_elem: SetBufferElemInternal) {
-        const {stored_data_mirror} = this;
+        const { stored_data_mirror, elem_word_size } = this;
         console.assert(removed_elem.owner_set == this);
         const last_element_index = stored_data_mirror.length - 1;
         const last_element = stored_data_mirror[last_element_index];
@@ -107,12 +107,13 @@ export class GlSetBuffer {
         // Move last element of array into the slot where the removed element resided to fill the gap. No need to remove the old last_element values.
         if (last_element != removed_elem) gl.bufferSubData(gl.ARRAY_BUFFER, removed_elem.gpu_root_idx, last_element.subarray_buffer);
         last_element.gpu_root_idx = removed_elem.gpu_root_idx;
+        this.storage_write_idx -= elem_word_size;
 
         // Update CPU mirror
         this.stored_data_mirror[removed_elem.cpu_index] = last_element;  // Perform the same move on the CPU mirror. No need to check for whether or not this is necessary as the runtime tax is minimal.
-        this.stored_data_mirror.splice(last_element_index - 1, 1);  // Removing the duplicate element in the CPU mirror is necessary however because we're using lists, not arrays.
-        this.storage_write_idx -= this.elem_word_size;
+        this.stored_data_mirror.splice(last_element_index, 1);  // Removing the duplicate element in the CPU mirror is necessary however because we're using lists, not arrays.
         last_element.cpu_index = removed_elem.cpu_index;  // Steal the index from the element it replaced.
+
         removed_elem.owner_set = undefined;
     }
 
