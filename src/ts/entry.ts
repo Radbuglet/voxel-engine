@@ -45,16 +45,18 @@ const array_buffer = gl.createBuffer()!;
 const my_chunk = new VoxelChunkRenderer(gl, array_buffer);
 (window as any).my_chunk = my_chunk;
 (window as any).gl = gl;
-my_chunk.placeVoxel([0, 0, 0]);
-my_chunk.placeVoxel([0, 1, 0]);
-my_chunk.placeVoxel([0, 2, 0]);
-my_chunk.placeVoxel([1, 0, 0]);
-my_chunk.placeVoxel([2, 0, 0]);
-my_chunk.placeVoxel([0, 0, 1]);
-my_chunk.placeVoxel([0, 0, 2]);
-my_chunk.placeVoxel([3, 3, 3]);
-my_chunk.placeVoxel([3, 2, 3]);
-my_chunk.placeVoxel([3, 1, 3]);
+my_chunk.placeVoxel([
+    [0, 0, 0],
+    [0, 1, 0],
+    [0, 2, 0],
+    [1, 0, 0],
+    [2, 0, 0],
+    [0, 0, 1],
+    [0, 0, 2],
+    [3, 3, 3],
+    [3, 2, 3],
+    [3, 1, 3]
+]);
 
 // Setup vertex accessing
 const vslot_data = gl.getAttribLocation(render_program, "vertex_data");
@@ -71,7 +73,7 @@ gl.enable(gl.DEPTH_TEST);
 gl.useProgram(render_program);
 
 const proj_mat = new Float32Array(16);
-mat4.perspective(proj_mat, 1.22173, canvas.width / canvas.height, 0.01, 1000);
+mat4.perspective(proj_mat, 1.22173, canvas.width / canvas.height, 0.01, 1000);  // Fov here is hard-coded at 70.
 gl.uniformMatrix4fv(gl.getUniformLocation(render_program, "projection"), false, proj_mat);
 
 const upos_view = gl.getUniformLocation(render_program, "view");

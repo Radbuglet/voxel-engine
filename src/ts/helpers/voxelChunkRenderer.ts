@@ -111,25 +111,38 @@ export class VoxelChunkRenderer {
         gl.drawArrays(gl.TRIANGLES, 0, this.face_set_manager.element_count * 6);  // There are 6 vertices per face. Draw uses vertex count. Therefore, we multiply by 6.
     }
 
-    placeVoxel(pos: vec3) {  // TODO: Add support for doing in batches.
+    placeVoxel(positions: vec3[]) {  // TODO: Add support for "slab" blocks, materials, and lighting data; optimize.
         const { gl, buffer, voxels, face_set_manager, faces } = this;
-        const encoded_pos = encodeVertexPos(pos);
-        console.assert(!voxels.has(encoded_pos));
 
-        // Determine faces to create and delete all unnecessary faces.
+        // Encode positions and record them in the voxel set.
+        const encoded_positions = positions.map(pos => {
+            const encoded_pos = encodeVertexPos(pos);
+            console.assert(!voxels.has(encoded_pos));
+            voxels.add(encoded_pos);
+            return encoded_pos;
+        });
+
+
+        // Determine faces to create while deleting all unnecessary faces.
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-        const additional_faces: { face_def: HandledFace, key: number }[] = [];
-        for (const face_def of FACE_LIST) {
-            const has_neighbor = voxels.has(encoded_pos + face_def.relative);
-            const key = face_def.axis.encode_face(encoded_pos, face_def.axis_sign);
+        const additional_faces: { face_def: HandledFace, face_key: number, encoded_pos: number }[] = [];
 
-            if (has_neighbor) {  // Since this block used to be air and this face has a neighbor, we must delete that face.
-                face_set_manager.removeElement(gl, faces.get(key)!);
-                faces.delete(key);
-            }
+        for (const encoded_pos of encoded_positions) {
+            for (const face_def of FACE_LIST) {
+                const has_neighbor = voxels.has(encoded_pos + face_def.relative);
+                const key = face_def.axis.encode_face(encoded_pos, face_def.axis_sign);
 
-            if (!has_neighbor) {
-                additional_faces.push({ face_def, key });
+                if (has_neighbor) {  // Since this block used to be air and this face has a neighbor, we must delete the neighboring face.
+                    const face = faces.get(key);
+                    if (face != null) {  // This check is here if that block doesn't have a face because it's being processed in the same batch as this voxel.
+                        face_set_manager.removeElement(gl, face);
+                        faces.delete(key);
+                    }
+                }
+
+                if (!has_neighbor) {
+                    additional_faces.push({ face_def, face_key: key, encoded_pos });
+                }
             }
         }
 
@@ -138,7 +151,7 @@ export class VoxelChunkRenderer {
         let offset = 0;
         for (const additional_face of additional_faces) {
             const { face_def } = additional_face;
-            face_def.axis.append_face(elements, offset, encoded_pos, face_def.axis_sign);
+            face_def.axis.append_face(elements, offset, additional_face.encoded_pos, face_def.axis_sign);
             offset += 6;
         }
 
@@ -147,10 +160,9 @@ export class VoxelChunkRenderer {
             let idx = 0;
             for (const cpu_ref of cpu_face_references) {
                 const additional_face = additional_faces[idx];
-                faces.set(additional_face.key, cpu_ref);
+                faces.set(additional_face.face_key, cpu_ref);
                 idx++;
             }
         }
-        voxels.add(encoded_pos);
     }
 }
