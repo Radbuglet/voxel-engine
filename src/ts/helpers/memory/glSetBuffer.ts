@@ -1,5 +1,5 @@
 // Welcome to the intersection between GPU programming and algorithm programming ie. debugging hell
-import {GlCtx, TypedArray} from "./typescript/aliases";
+import {GlCtx, TypedArray} from "../typescript/aliases";
 import {readTypedArrayBytes} from "./typedArrays";
 
 type IdealCapacityGetter = (required_capacity: number) => number;
@@ -11,7 +11,7 @@ type SetBufferElemInternal = {
 };
 export type SetBufferElem = Readonly<SetBufferElemInternal>;
 
-// TODO: Test; review; document everything. (IMPORTANT!)
+// TODO: Test; review; document everything.
 export class GlSetBuffer {
     /**
      * @desc represents the number of bytes in the array. Also serves as the index to the root of any concat operation.
@@ -61,6 +61,7 @@ export class GlSetBuffer {
      * @param elements_view: An buffer containing the elements to add in contiguous memory. Each element in the buffer is
      * of the specified word size and thus the buffer's length must be a multiple of the word size.
      * Each element buffer may not be mutated after being added to the set.
+     * TODO: Add support for TypedArray being a subarray.
      */
     addElements(gl: GlCtx, elements_view: TypedArray): SetBufferElem[] | null {
         const { elem_word_size, stored_data_mirror } = this;
@@ -138,7 +139,7 @@ export class GlSetBuffer {
         const { elem_word_size, element_count } = this;
         // Figure out new buffer capacity size
         const capacity = GlSetBuffer.getIdealCapacityBytes(elem_word_size, element_count, this.get_ideal_capacity);  // Capacity is in bytes, despite get_ideal_capacity returning words.
-        if (capacity == this.buffer_capacity) return;  // Nothing will change.
+        if (capacity == this.buffer_capacity) return;  // Nothing will change so we ignore this operation.
 
         // Generate data buffer to upload
         const rewrite_data_buffer = new Uint8Array(capacity);

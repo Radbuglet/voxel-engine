@@ -61,7 +61,7 @@ my_chunk.placeVoxels([
 // Setup vertex accessing
 const vslot_data = gl.getAttribLocation(render_program, "vertex_data");
 gl.enableVertexAttribArray(vslot_data);  // Tells the vertex shader to use the VAP instead of a constant.
-gl.vertexAttribPointer(vslot_data, 1, gl.UNSIGNED_SHORT, false, 0, 0);  // Specify how to lookup vertices at the "vertex slot"
+gl.vertexAttribPointer(vslot_data, 2, gl.UNSIGNED_SHORT, false, 0, 0);  // Specify how to lookup vertices at the "vertex slot"
 
 // Draw
 canvas.width = 500;

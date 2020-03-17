@@ -1,5 +1,5 @@
-import {GlSetBuffer, SetBufferElem} from "./glSetBuffer";
-import {GlCtx, Vec3Axis} from "./typescript/aliases";
+import {GlSetBuffer, SetBufferElem} from "./memory/glSetBuffer";
+import {GlCtx, IBool, Vec3Axis} from "./typescript/aliases";
 import {vec3} from "gl-matrix";
 
 // Static
@@ -11,24 +11,38 @@ function encodeVertexPos(pos: vec3) {
 }
 
 type FaceAxis = {
-    append_face: (target: Uint16Array, target_offset: number, encoded_origin: number, sign: 0 | 1) => void,
-    encode_face: (encoded_origin: number, sign: 0 | 1) => number
+    append_quad: (target: Uint16Array, target_offset: number, encoded_origin: number, sign: IBool) => void,
+    encode_face: (encoded_origin: number, sign: IBool) => number
 }
-function makeFaceAxis(face_bases_vec: vec3[], face_axis: Vec3Axis): FaceAxis {
-    const face_bases_encoded = face_bases_vec.map(encodeVertexPos);
+type EncodedFace = {
+    pos: number,
+    uv: number
+};
+function makeFaceAxis(faces_conf: { pos: [IBool, IBool, IBool], uv: [IBool, IBool] }[], face_axis: Vec3Axis): FaceAxis {
+    const faces_encoded: EncodedFace[] = faces_conf.map(face => {
+        const { pos, uv } = face;
+        return {
+            pos: encodeVertexPos(pos),
+            uv: 1 * uv[0] + 2 * uv[1]
+        }
+    });
     const face_opp_rel_encoded = FACE_UNIT_AXIS_ENCODED[face_axis];
 
     return {
-        append_face(target, target_offset, encoded_origin, sign) {
+        append_quad(target, target_offset, encoded_origin, sign) {
             const common_vec_encoded = encoded_origin + (sign == 1 ? face_opp_rel_encoded : 0);
+            function writeVertex(root_offset: number, face: EncodedFace) {
+                const write_idx = target_offset + root_offset;
+                target[write_idx] = common_vec_encoded + face.pos;
+                target[write_idx + 1] = face.uv;
+            }
+            writeVertex(0, faces_encoded[0]);
+            writeVertex(2, faces_encoded[sign == 0 ? 2 : 1]);
+            writeVertex(4, faces_encoded[sign == 0 ? 1 : 2]);
 
-            target[target_offset]     = common_vec_encoded + face_bases_encoded[0];
-            target[target_offset + 1] = common_vec_encoded + face_bases_encoded[sign == 0 ? 2 : 1];
-            target[target_offset + 2] = common_vec_encoded + face_bases_encoded[sign == 0 ? 1 : 2];
-
-            target[target_offset + 3] = common_vec_encoded + face_bases_encoded[3];
-            target[target_offset + 4] = common_vec_encoded + face_bases_encoded[sign == 0 ? 5 : 4];
-            target[target_offset + 5] = common_vec_encoded + face_bases_encoded[sign == 0 ? 4 : 5];
+            writeVertex(6, faces_encoded[3]);
+            writeVertex(8, faces_encoded[sign == 0 ? 5 : 4]);
+            writeVertex(10, faces_encoded[sign == 0 ? 4 : 5]);
         },
         encode_face(encoded_origin, face) {
             return encoded_origin + (face == 1 ? face_opp_rel_encoded : 0) + face_axis / 10;
@@ -38,36 +52,36 @@ function makeFaceAxis(face_bases_vec: vec3[], face_axis: Vec3Axis): FaceAxis {
 const FACE_AXIS = {
     X: makeFaceAxis([
         // Tri 1
-        [0, 0, 0],
-        [0, 1, 1],
-        [0, 0, 1],
+        { pos: [0, 0, 0], uv: [0, 0] },
+        { pos: [0, 1, 1], uv: [1, 1] },
+        { pos: [0, 0, 1], uv: [0, 1] },
 
         // Tri 2
-        [0, 0, 0],
-        [0, 1, 0],
-        [0, 1, 1]
+        { pos: [0, 0, 0], uv: [0, 0] },
+        { pos: [0, 1, 0], uv: [1, 0] },
+        { pos: [0, 1, 1], uv: [1, 1] }
     ], 0),
     Y: makeFaceAxis([
         // Tri 1
-        [0, 0, 0],
-        [1, 0, 1],
-        [1, 0, 0],
+        { pos: [0, 0, 0], uv: [0, 0] },
+        { pos: [1, 0, 1], uv: [1, 1] },
+        { pos: [1, 0, 0], uv: [1, 0] },
 
         // Tri 2
-        [0, 0, 0],
-        [0, 0, 1],
-        [1, 0, 1]
+        { pos: [0, 0, 0], uv: [0, 0] },
+        { pos: [0, 0, 1], uv: [0, 1] },
+        { pos: [1, 0, 1], uv: [1, 1] }
     ], 1),
     Z: makeFaceAxis([
         // Tri 1
-        [0, 0, 0],
-        [1, 0, 0],
-        [1, 1, 0],
+        { pos: [0, 0, 0], uv: [0, 0] },
+        { pos: [1, 0, 0], uv: [1, 0] },
+        { pos: [1, 1, 0], uv: [1, 1] },
 
         // Tri 2
-        [0, 0, 0],
-        [1, 1, 0],
-        [0, 1, 0]
+        { pos: [0, 0, 0], uv: [0, 0] },
+        { pos: [1, 1, 0], uv: [1, 1] },
+        { pos: [0, 1, 0], uv: [0, 1] }
     ], 2)
 };
 const FACES: Record<"nx" | "ny" | "nz" | "px" | "py" | "pz", HandledFace> = {
@@ -82,7 +96,7 @@ const FACES: Record<"nx" | "ny" | "nz" | "px" | "py" | "pz", HandledFace> = {
 type HandledFace = {
     relative: number,
     axis: FaceAxis,
-    axis_sign: 0 | 1
+    axis_sign: IBool
 };
 const FACE_LIST: HandledFace[] = [
     FACES.nx,
@@ -102,7 +116,7 @@ export class VoxelChunkRenderer {
     constructor(private readonly gl: GlCtx, private readonly buffer: WebGLBuffer) {
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         this.face_set_manager = GlSetBuffer.prepareBufferAndConstruct(
-            gl, 12, required_capacity => required_capacity * 1.5 + 6 * 10);
+            gl, 24, required_capacity => required_capacity * 1.5 + 6 * 10);
     }
 
     draw() {
@@ -121,7 +135,6 @@ export class VoxelChunkRenderer {
             voxels.add(encoded_pos);
             return encoded_pos;
         });
-
 
         // Determine faces to create while deleting all unnecessary faces.
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -147,12 +160,12 @@ export class VoxelChunkRenderer {
         }
 
         // Upload to buffer
-        const elements = new Uint16Array(additional_faces.length * 6);
+        const elements = new Uint16Array(additional_faces.length * 12);  // There are 12 shorts per face (2 shorts per vertex)
         let offset = 0;
         for (const additional_face of additional_faces) {
             const { face_def } = additional_face;
-            face_def.axis.append_face(elements, offset, additional_face.encoded_pos, face_def.axis_sign);
-            offset += 6;
+            face_def.axis.append_quad(elements, offset, additional_face.encoded_pos, face_def.axis_sign);
+            offset += 12;
         }
 
         const cpu_face_references = face_set_manager.addElements(gl, elements)!;
