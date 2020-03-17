@@ -68,18 +68,21 @@ export class GlSetBuffer {
         console.assert(elements_view.byteLength % elem_word_size == 0);
 
         // Add the new elements to the CPU mirror; generate reference array for external uses.
-        const element_references: SetBufferElem[] = new Array(elements_view.byteLength / elements_view.BYTES_PER_ELEMENT);
+        const element_references: SetBufferElem[] = new Array(elements_view.byteLength / elem_word_size);
         const word_size_in_view = elem_word_size / elements_view.BYTES_PER_ELEMENT;
-        for (let elem_idx = 0; elem_idx < elements_view.byteLength / elements_view.BYTES_PER_ELEMENT; elem_idx += elem_word_size / elements_view.BYTES_PER_ELEMENT) {
+
+        let elem_ref_idx = 0;
+        for (let elem_idx_in_view = 0; elem_idx_in_view < elements_view.byteLength / elements_view.BYTES_PER_ELEMENT; elem_idx_in_view += elem_word_size / elements_view.BYTES_PER_ELEMENT) {
             const elem_ref: SetBufferElemInternal = {
                 owner_set: this,
                 cpu_index: stored_data_mirror.length,
                 gpu_root_idx: this.storage_write_idx,
-                subarray_buffer: elements_view.subarray(elem_idx, elem_idx + word_size_in_view),
+                subarray_buffer: elements_view.subarray(elem_idx_in_view, elem_idx_in_view + word_size_in_view),
             };
             stored_data_mirror.push(elem_ref);
-            element_references.push(elem_ref);
+            element_references[elem_ref_idx] = elem_ref;
             this.storage_write_idx += elem_word_size;
+            elem_ref_idx++;
         }
 
         // Update GPU buffer
