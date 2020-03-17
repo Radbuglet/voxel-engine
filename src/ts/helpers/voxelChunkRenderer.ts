@@ -111,7 +111,7 @@ export class VoxelChunkRenderer {
         gl.drawArrays(gl.TRIANGLES, 0, this.face_set_manager.element_count * 6);  // There are 6 vertices per face. Draw uses vertex count. Therefore, we multiply by 6.
     }
 
-    placeVoxel(positions: vec3[]) {  // TODO: Add support for "slab" blocks, materials, and lighting data; optimize.
+    placeVoxels(positions: vec3[]) {  // TODO: Add support for "slab" blocks, materials, and lighting data; optimize; properly handle insertion failure.
         const { gl, buffer, voxels, face_set_manager, faces } = this;
 
         // Encode positions and record them in the voxel set.
@@ -155,7 +155,7 @@ export class VoxelChunkRenderer {
             offset += 6;
         }
 
-        const cpu_face_references = face_set_manager.addElements(gl, elements);
+        const cpu_face_references = face_set_manager.addElements(gl, elements)!;
         {
             let idx = 0;
             for (const cpu_ref of cpu_face_references) {

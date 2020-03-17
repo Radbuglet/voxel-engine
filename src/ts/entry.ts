@@ -45,7 +45,7 @@ const array_buffer = gl.createBuffer()!;
 const my_chunk = new VoxelChunkRenderer(gl, array_buffer);
 (window as any).my_chunk = my_chunk;
 (window as any).gl = gl;
-my_chunk.placeVoxel([
+my_chunk.placeVoxels([
     [0, 0, 0],
     [0, 1, 0],
     [0, 2, 0],
