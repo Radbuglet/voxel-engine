@@ -64,8 +64,8 @@ gl.enableVertexAttribArray(vslot_data);  // Tells the vertex shader to use the V
 gl.vertexAttribPointer(vslot_data, 2, gl.UNSIGNED_SHORT, false, 0, 0);  // Specify how to lookup vertices at the "vertex slot"
 
 // Draw
-canvas.width = 500;
-canvas.height = 500;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 gl.viewport(0, 0, canvas.width, canvas.height);
 gl.clearColor(0.2, 0.2, 0.2, 1);
 gl.enable(gl.CULL_FACE);
@@ -73,7 +73,7 @@ gl.enable(gl.DEPTH_TEST);
 gl.useProgram(render_program);
 
 const proj_mat = new Float32Array(16);
-mat4.perspective(proj_mat, 1.22173, canvas.width / canvas.height, 0.01, 1000);  // Fov here is hard-coded at 70.
+mat4.perspective(proj_mat, Math.PI * 0.7, canvas.width / canvas.height, 0.01, 1000);
 gl.uniformMatrix4fv(gl.getUniformLocation(render_program, "projection"), false, proj_mat);
 
 const upos_view = gl.getUniformLocation(render_program, "view");
