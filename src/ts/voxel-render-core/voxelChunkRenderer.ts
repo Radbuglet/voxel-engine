@@ -9,20 +9,20 @@ export class VoxelChunkRenderer {
     private readonly face_set_manager: GlSetBuffer;
     private readonly faces = new Map<number, SetBufferElem>();  // Key is an encoded face obtained from the face template.
 
-    constructor(private readonly gl: GlCtx, private readonly buffer: WebGLBuffer) {
+    constructor(gl: GlCtx, private readonly buffer: WebGLBuffer) {
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         this.face_set_manager = GlSetBuffer.prepareBufferAndConstruct(
             gl, 24, required_capacity => required_capacity * 1.5 + 6 * 10);
     }
 
-    draw() {
-        const { gl, buffer } = this;
+    draw(gl: GlCtx) {
+        const { buffer } = this;
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         gl.drawArrays(gl.TRIANGLES, 0, this.face_set_manager.element_count * 6);  // There are 6 vertices per face. Draw uses vertex count. Therefore, we multiply by 6.
     }
 
-    handlePlacedVoxels(chunk: VoxelChunkHeadless<any>, positions: vec3[]) {  // TODO: Add support for "slab" blocks, materials, and lighting data; optimize; properly handle insertion failure.
-        const { gl, buffer, face_set_manager, faces } = this;
+    handlePlacedVoxels(gl: GlCtx, chunk: VoxelChunkHeadless<any>, positions: vec3[]) {  // TODO: Add support for "slab" blocks, materials, and lighting data; optimize; properly handle insertion failure.
+        const { buffer, face_set_manager, faces } = this;
 
         // Encode positions and record them in the voxel set.
         const voxel_pointers = positions.map(pos => chunk.getVoxelPointer(pos));

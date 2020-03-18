@@ -56,7 +56,7 @@ function placeVoxels(positions: vec3[]) {
         write_pointer.moveTo(pos);
         write_pointer.setData(true);
     }
-    my_chunk_renderer.handlePlacedVoxels(my_chunk_data, positions);
+    my_chunk_renderer.handlePlacedVoxels(gl, my_chunk_data, positions);
 }
 (window as any).placeVoxels = placeVoxels;
 placeVoxels([
@@ -153,7 +153,7 @@ function draw() {
     gl.uniformMatrix4fv(upos_view, false, view_mat);
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    my_chunk_renderer.draw();
+    my_chunk_renderer.draw(gl);
 }
 
 draw();
