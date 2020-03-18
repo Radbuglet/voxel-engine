@@ -1,47 +1,60 @@
-import {MetaContainer} from "../helpers/metaContainer";
 import {vec3} from "gl-matrix";
 import {CHUNK_BLOCK_SIZE, encodeVertexPos, FaceDefinition} from "./faces";
+import {TGeneric_VoxelHeadless} from "./voxelWorldHeadless";
 
-export class VoxelChunkHeadless<TVoxel> extends MetaContainer {
-    public readonly voxels = new Map<number, TVoxel>();
-    public neighbor_px?: VoxelChunkHeadless<TVoxel>;
-    public neighbor_py?: VoxelChunkHeadless<TVoxel>;
-    public neighbor_pz?: VoxelChunkHeadless<TVoxel>;
-    public neighbor_nx?: VoxelChunkHeadless<TVoxel>;
-    public neighbor_ny?: VoxelChunkHeadless<TVoxel>;
-    public neighbor_nz?: VoxelChunkHeadless<TVoxel>;
+export interface ProvidesVoxelChunkHeadless<TGeneric extends TGeneric_VoxelHeadless<TGeneric>> {
+    voxel_chunk_headless: VoxelChunkHeadless<TGeneric>;
+}
 
-    getVoxelPointer(pos: vec3): ChunkVoxelPointer<TVoxel> {
-        return new ChunkVoxelPointer<TVoxel>(this, pos, encodeVertexPos(pos));
+export class VoxelChunkHeadless<TGeneric extends TGeneric_VoxelHeadless<TGeneric>>{
+    public readonly voxels = new Map<number, TGeneric["voxel"]>();
+    public neighbor_px?: TGeneric["chunk"];
+    public neighbor_py?: TGeneric["chunk"];
+    public neighbor_pz?: TGeneric["chunk"];
+    public neighbor_nx?: TGeneric["chunk"];
+    public neighbor_ny?: TGeneric["chunk"];
+    public neighbor_nz?: TGeneric["chunk"];
+
+    getVoxelPointer(pos: vec3): ChunkVoxelPointer<TGeneric["voxel"]> {
+        return new ChunkVoxelPointer<TGeneric>(this, pos, encodeVertexPos(pos));
+    }
+
+    get voxel_chunk_headless() {
+        return this;
     }
 }
 
-export class ChunkVoxelPointer<TVoxel> {
-    constructor(private readonly chunk: VoxelChunkHeadless<TVoxel>, public readonly pos: vec3, public readonly encoded_pos: number) {
+export class ChunkVoxelPointer<TGeneric extends TGeneric_VoxelHeadless<TGeneric>> {
+    constructor(public readonly chunk: TGeneric["chunk"], public pos: vec3, public encoded_pos: number) {
         this.encoded_pos = encodeVertexPos(pos);
     }
 
-    getNeighbor(face: FaceDefinition): ChunkVoxelPointer<TVoxel> | null {
+    getNeighbor(face: FaceDefinition): ChunkVoxelPointer<TGeneric> | null {
         const new_pos = vec3.create();
         vec3.add(new_pos, this.pos, face.vec_relative);
         if (new_pos[face.axis.vec_axis] < 0 || new_pos[face.axis.vec_axis] >= CHUNK_BLOCK_SIZE) {  // No longer in the chunk bounds.
-            const new_chunk = this.chunk[face.chunk_towards_prop];
+            const new_chunk = this.chunk.voxel_chunk_headless[face.chunk_towards_prop];
             if (new_chunk == null) return null;
-            return new ChunkVoxelPointer<TVoxel>(new_chunk, new_pos, encodeVertexPos(new_pos));
+            return new ChunkVoxelPointer<TGeneric>(new_chunk, new_pos, encodeVertexPos(new_pos));
         } else {
-            return new ChunkVoxelPointer<TVoxel>(this.chunk, new_pos, this.encoded_pos + face.encoded_relative);
+            return new ChunkVoxelPointer<TGeneric>(this.chunk, new_pos, this.encoded_pos + face.encoded_relative);
         }
     }
 
-    setVoxel(data: TVoxel) {
-        this.chunk.voxels.set(this.encoded_pos, data);
+    setData(data: TGeneric["voxel"]) {
+        this.chunk.voxel_chunk_headless.voxels.set(this.encoded_pos, data);
     }
 
-    getVoxel() {
-        return this.chunk.voxels.get(this.encoded_pos);
+    getData() {
+        return this.chunk.voxel_chunk_headless.voxels.get(this.encoded_pos);
     }
 
     hasVoxel() {
-        return this.chunk.voxels.has(this.encoded_pos);
+        return this.chunk.voxel_chunk_headless.voxels.has(this.encoded_pos);
+    }
+
+    moveTo(chunk_pos: vec3) {
+        this.encoded_pos = encodeVertexPos(chunk_pos);
+        this.pos = chunk_pos;
     }
 }

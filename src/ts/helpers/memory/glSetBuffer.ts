@@ -11,7 +11,6 @@ type SetBufferElemInternal = {
 };
 export type SetBufferElem = Readonly<SetBufferElemInternal>;
 
-// TODO: Test; review; document everything.
 export class GlSetBuffer {
     /**
      * @desc represents the number of bytes in the array. Also serves as the index to the root of any concat operation.
@@ -49,8 +48,7 @@ export class GlSetBuffer {
         private readonly elem_word_size: number,
         private buffer_capacity: number,
         private readonly get_ideal_capacity: IdealCapacityGetter
-    ) {
-    }
+    ) {}
 
     /**
      *desc Adds one or more elements to the set and returns their CPU mirrored references. The method will resize the buffer
@@ -147,8 +145,8 @@ export class GlSetBuffer {
             let write_idx = 0;
             for (const element of this.stored_data_mirror) {
                 const element_data_view = readTypedArrayBytes(element.subarray_buffer);
-                for (let byte = 0; byte < element_data_view.byteLength; byte++) {
-                    rewrite_data_buffer[write_idx + byte] = element_data_view[byte];
+                for (let byte_idx = 0; byte_idx < element_data_view.byteLength; byte_idx++) {
+                    rewrite_data_buffer[write_idx + byte_idx] = element_data_view[byte_idx];
                 }
                 write_idx += elem_word_size;
             }

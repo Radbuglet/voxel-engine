@@ -2,11 +2,11 @@ import {GlSetBuffer, SetBufferElem} from "../helpers/memory/glSetBuffer";
 import {GlCtx, IBool, Vec3Axis} from "../helpers/typescript/aliases";
 import {vec3} from "gl-matrix";
 import {encodeVertexPos, FACE_LIST, FaceDefinition} from "../voxel-data/faces";
+import {ChunkVoxelPointer, VoxelChunkHeadless} from "../voxel-data/voxelChunkHeadless";
 
-// Class  TODO: Decouple headless chunk data management and rendering.
+// TODO: Document
 export class VoxelChunkRenderer {
     private readonly face_set_manager: GlSetBuffer;
-    private readonly voxels = new Set<number>();
     private readonly faces = new Map<number, SetBufferElem>();  // Key is an encoded face obtained from the face template.
 
     constructor(private readonly gl: GlCtx, private readonly buffer: WebGLBuffer) {
@@ -21,25 +21,21 @@ export class VoxelChunkRenderer {
         gl.drawArrays(gl.TRIANGLES, 0, this.face_set_manager.element_count * 6);  // There are 6 vertices per face. Draw uses vertex count. Therefore, we multiply by 6.
     }
 
-    placeVoxels(positions: vec3[]) {  // TODO: Add support for "slab" blocks, materials, and lighting data; optimize; properly handle insertion failure.
-        const { gl, buffer, voxels, face_set_manager, faces } = this;
+    handlePlacedVoxels(chunk: VoxelChunkHeadless<any>, positions: vec3[]) {  // TODO: Add support for "slab" blocks, materials, and lighting data; optimize; properly handle insertion failure.
+        const { gl, buffer, face_set_manager, faces } = this;
 
         // Encode positions and record them in the voxel set.
-        const encoded_positions = positions.map(pos => {
-            const encoded_pos = encodeVertexPos(pos);
-            console.assert(!voxels.has(encoded_pos));
-            voxels.add(encoded_pos);
-            return encoded_pos;
-        });
+        const voxel_pointers = positions.map(pos => chunk.getVoxelPointer(pos));
 
         // Determine faces to create while deleting all unnecessary faces.
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-        const additional_faces: { face_def: FaceDefinition, face_key: number, encoded_pos: number }[] = [];
+        const additional_faces: { face_def: FaceDefinition, face_key: number, voxel_pointer: ChunkVoxelPointer<any> }[] = [];
 
-        for (const encoded_pos of encoded_positions) {
+        for (const voxel_pointer of voxel_pointers) {
             for (const face_def of FACE_LIST) {
-                const has_neighbor = voxels.has(encoded_pos + face_def.encoded_relative);
-                const key = face_def.axis.encodeFace(encoded_pos, face_def.axis_sign);
+                const neighbor_pointer = voxel_pointer.getNeighbor(face_def);
+                const has_neighbor = neighbor_pointer != null && neighbor_pointer.hasVoxel();
+                const key = face_def.axis.encodeFace(voxel_pointer.encoded_pos, face_def.axis_sign);
 
                 if (has_neighbor) {  // Since this block used to be air and this face has a neighbor, we must delete the neighboring face.
                     const face = faces.get(key);
@@ -50,7 +46,7 @@ export class VoxelChunkRenderer {
                 }
 
                 if (!has_neighbor) {
-                    additional_faces.push({ face_def, face_key: key, encoded_pos });
+                    additional_faces.push({ face_def, face_key: key, voxel_pointer: voxel_pointer });
                 }
             }
         }
@@ -60,7 +56,7 @@ export class VoxelChunkRenderer {
         let offset = 0;
         for (const additional_face of additional_faces) {
             const { face_def } = additional_face;
-            face_def.axis.appendQuad(elements, offset, additional_face.encoded_pos, face_def.axis_sign);
+            face_def.axis.appendQuad(elements, offset, additional_face.voxel_pointer.encoded_pos, face_def.axis_sign);
             offset += 12;
         }
 

@@ -3,6 +3,9 @@ import {mat4, vec3} from "gl-matrix";
 import VOXEL_VERTEX_SOURCE from "./../res/voxel.vert";
 import VOXEL_FRAG_SOURCE from "./../res/voxel.frag";
 import {VoxelChunkRenderer} from "./voxel-render-core/voxelChunkRenderer";
+import {VoxelWorldHeadless} from "./voxel-data/voxelWorldHeadless";
+import {VoxelChunkHeadless} from "./voxel-data/voxelChunkHeadless";
+import {encodeVertexPos} from "./voxel-data/faces";
 
 const canvas = document.createElement("canvas");
 const gl = canvas.getContext("webgl")!;
@@ -42,10 +45,21 @@ const render_program = loadProgram(VOXEL_VERTEX_SOURCE, VOXEL_FRAG_SOURCE);
 
 // Setup the chunk data array buffer
 const array_buffer = gl.createBuffer()!;
-const my_chunk = new VoxelChunkRenderer(gl, array_buffer);
-(window as any).my_chunk = my_chunk;
-(window as any).gl = gl;
-my_chunk.placeVoxels([
+const world_data = new VoxelWorldHeadless();
+const my_chunk_data = new VoxelChunkHeadless();
+world_data.makeChunk([0, 0, 0], my_chunk_data);
+const my_chunk_renderer = new VoxelChunkRenderer(gl, array_buffer);
+
+function placeVoxels(positions: vec3[]) {
+    const write_pointer = my_chunk_data.getVoxelPointer(positions[0]);
+    for (const pos of positions) {
+        write_pointer.moveTo(pos);
+        write_pointer.setData(true);
+    }
+    my_chunk_renderer.handlePlacedVoxels(my_chunk_data, positions);
+}
+(window as any).placeVoxels = placeVoxels;
+placeVoxels([
     [0, 0, 0],
     [0, 1, 0],
     [0, 2, 0],
@@ -139,7 +153,7 @@ function draw() {
     gl.uniformMatrix4fv(upos_view, false, view_mat);
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    my_chunk.draw();
+    my_chunk_renderer.draw();
 }
 
 draw();
