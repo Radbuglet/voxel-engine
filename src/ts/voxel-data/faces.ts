@@ -1,21 +1,21 @@
 import {vec3} from "gl-matrix";
 import {IBool, Vec3Axis} from "../helpers/typescript/aliases";
 
-const CHUNK_ENCODING_SIZE = 10;  // Must be the same as the constant in the vertex shader.
-export const CHUNK_BLOCK_SIZE = CHUNK_ENCODING_SIZE - 2;
+const CHUNK_ENCODING_SIZE = 18;  // Must be the same as the constant in the vertex shader.
+export const CHUNK_BLOCK_COUNT = CHUNK_ENCODING_SIZE - 2;
 const CHUNK_SIZE_SQUARED = CHUNK_ENCODING_SIZE * CHUNK_ENCODING_SIZE;
 export const FACE_UNIT_AXIS_ENCODED = [1, CHUNK_ENCODING_SIZE, CHUNK_SIZE_SQUARED];
 export function encodeVertexPos(pos: vec3) {
     return pos[0] + pos[1] * CHUNK_ENCODING_SIZE + pos[2] * CHUNK_SIZE_SQUARED;
 }
 
-type EncodedFace = {
+type EncodedAxisFace = {
     pos: number,
     uv: number
 };
 
 export class FaceAxis {
-    private readonly faces_encoded: EncodedFace[];
+    private readonly faces_encoded: EncodedAxisFace[];
     private readonly face_opp_rel_encoded: number;
 
     constructor(faces_conf: { pos: [IBool, IBool, IBool], uv: [IBool, IBool] }[], public readonly vec_axis: Vec3Axis) {
@@ -32,7 +32,7 @@ export class FaceAxis {
     appendQuad(target: Uint16Array, target_offset: number, encoded_origin: number, sign: IBool) {
         const { faces_encoded, face_opp_rel_encoded } = this;
         const common_vec_encoded = encoded_origin + (sign == 1 ? face_opp_rel_encoded : 0);
-        function writeVertex(root_offset: number, face: EncodedFace) {
+        function writeVertex(root_offset: number, face: EncodedAxisFace) {
             const write_idx = target_offset + root_offset;
             target[write_idx] = common_vec_encoded + face.pos;
             target[write_idx + 1] = face.uv;
@@ -88,47 +88,47 @@ export const FACE_AXIS = {
     ], 2)
 };
 
-type NeighborChunkProps = "neighbor_px" |"neighbor_py" | "neighbor_pz" | "neighbor_nx" |"neighbor_ny" | "neighbor_nz";
+export type FaceKey = "px" |"py" | "pz" | "nx" |"ny" | "nz";
 export type FaceDefinition = {
     vec_relative: vec3,
     encoded_relative: number,
     axis: FaceAxis,
     axis_sign: IBool,
-    chunk_towards_prop: NeighborChunkProps,
-    chunk_inverse_prop: NeighborChunkProps
+    towards_key: FaceKey,
+    inverse_key: FaceKey
 };
 
 export const FACES: Record<"nx" | "ny" | "nz" | "px" | "py" | "pz", FaceDefinition> = {
     nx: {
         vec_relative: [-1, 0, 0], encoded_relative: -FACE_UNIT_AXIS_ENCODED[0],
         axis: FACE_AXIS.X, axis_sign: 0,
-        chunk_towards_prop: "neighbor_nx", chunk_inverse_prop: "neighbor_px"
+        towards_key: "nx", inverse_key: "px"
     },
     px: {
         vec_relative: [1, 0, 0], encoded_relative:  FACE_UNIT_AXIS_ENCODED[0],
         axis: FACE_AXIS.X, axis_sign: 1,
-        chunk_towards_prop: "neighbor_px", chunk_inverse_prop: "neighbor_nx"
+        towards_key: "px", inverse_key: "nx"
     },
     ny: {
         vec_relative: [0, -1, 0], encoded_relative: -FACE_UNIT_AXIS_ENCODED[1],
         axis: FACE_AXIS.Y, axis_sign: 0,
-        chunk_towards_prop: "neighbor_ny", chunk_inverse_prop: "neighbor_py"
+        towards_key: "ny", inverse_key: "py"
     },
     py: {
         vec_relative: [0, 1, 0], encoded_relative:  FACE_UNIT_AXIS_ENCODED[1],
         axis: FACE_AXIS.Y, axis_sign: 1,
-        chunk_towards_prop: "neighbor_py", chunk_inverse_prop: "neighbor_ny"
+        towards_key: "py", inverse_key: "ny"
     },
     nz: {
         vec_relative: [0, 0, -1], encoded_relative: -FACE_UNIT_AXIS_ENCODED[2],
         axis: FACE_AXIS.Z, axis_sign: 0,
-        chunk_towards_prop: "neighbor_nz", chunk_inverse_prop: "neighbor_pz"
+        towards_key: "nz", inverse_key: "pz"
     },
     pz: {
         vec_relative: [0, 0, 1], encoded_relative:  FACE_UNIT_AXIS_ENCODED[2],
         axis: FACE_AXIS.Z, axis_sign: 1,
-        chunk_towards_prop: "neighbor_pz", chunk_inverse_prop: "neighbor_nz"
-    },
+        towards_key: "pz", inverse_key: "nz"
+    }
 };
 export const FACE_LIST: FaceDefinition[] = [
     FACES.nx,

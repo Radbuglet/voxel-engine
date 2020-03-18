@@ -1,8 +1,8 @@
-// TODO: The following code is temporary and will be replaced when actually building the engine. The shader and the voxel utilities however, will probably be kept.
+// TODO: The following code is temporary and will be replaced **in its entirety** when actually building the engine.
 import {mat4, vec3} from "gl-matrix";
 import VOXEL_VERTEX_SOURCE from "./../res/voxel.vert";
 import VOXEL_FRAG_SOURCE from "./../res/voxel.frag";
-import {VoxelChunkRenderer} from "./voxel-render-core/voxelChunkRenderer";
+import {VoxelChunkRenderer, VoxelPlaceData} from "./voxel-render-core/voxelChunkRenderer";
 import {VoxelWorldHeadless} from "./voxel-data/voxelWorldHeadless";
 import {VoxelChunkHeadless} from "./voxel-data/voxelChunkHeadless";
 import {encodeVertexPos} from "./voxel-data/faces";
@@ -50,26 +50,25 @@ const my_chunk_data = new VoxelChunkHeadless();
 world_data.makeChunk([0, 0, 0], my_chunk_data);
 const my_chunk_renderer = new VoxelChunkRenderer(gl, array_buffer);
 
-function placeVoxels(positions: vec3[]) {
-    const write_pointer = my_chunk_data.getVoxelPointer(positions[0]);
-    for (const pos of positions) {
-        write_pointer.moveTo(pos);
+function placeVoxels(voxels: VoxelPlaceData[]) {
+    const write_pointer = my_chunk_data.getVoxelPointer(voxels[0].voxel_pos);
+    for (const voxel of voxels) {
+        write_pointer.moveTo(voxel.voxel_pos);
         write_pointer.setData(true);
     }
-    my_chunk_renderer.handlePlacedVoxels(gl, my_chunk_data, positions);
+    my_chunk_renderer.handlePlacedVoxels(gl, my_chunk_data, voxels);
 }
-(window as any).placeVoxels = placeVoxels;
 placeVoxels([
-    [0, 0, 0],
-    [0, 1, 0],
-    [0, 2, 0],
-    [1, 0, 0],
-    [2, 0, 0],
-    [0, 0, 1],
-    [0, 0, 2],
-    [3, 3, 3],
-    [3, 2, 3],
-    [3, 1, 3]
+    { voxel_pos: [0, 0, 0] as vec3, faces: { nx: { light: 0 }, ny: { light: 1 }, nz: { light: 2 }, px: { light: 3 }, py: { light: 4 }, pz: { light: 5 } } },
+    { voxel_pos: [0, 1, 0] as vec3, faces: { nx: { light: 0 }, ny: { light: 1 }, nz: { light: 2 }, px: { light: 3 }, py: { light: 4 }, pz: { light: 5 } } },
+    { voxel_pos: [0, 2, 0] as vec3, faces: { nx: { light: 0 }, ny: { light: 1 }, nz: { light: 2 }, px: { light: 3 }, py: { light: 4 }, pz: { light: 5 } } },
+    { voxel_pos: [1, 0, 0] as vec3, faces: { nx: { light: 0 }, ny: { light: 1 }, nz: { light: 2 }, px: { light: 3 }, py: { light: 4 }, pz: { light: 5 } } },
+    { voxel_pos: [2, 0, 0] as vec3, faces: { nx: { light: 0 }, ny: { light: 1 }, nz: { light: 2 }, px: { light: 3 }, py: { light: 4 }, pz: { light: 5 } } },
+    { voxel_pos: [0, 0, 1] as vec3, faces: { nx: { light: 0 }, ny: { light: 1 }, nz: { light: 2 }, px: { light: 3 }, py: { light: 4 }, pz: { light: 5 } } },
+    { voxel_pos: [0, 0, 2] as vec3, faces: { nx: { light: 0 }, ny: { light: 1 }, nz: { light: 2 }, px: { light: 3 }, py: { light: 4 }, pz: { light: 5 } } },
+    { voxel_pos: [3, 3, 3] as vec3, faces: { nx: { light: 0 }, ny: { light: 1 }, nz: { light: 2 }, px: { light: 3 }, py: { light: 4 }, pz: { light: 5 } } },
+    { voxel_pos: [3, 2, 3] as vec3, faces: { nx: { light: 0 }, ny: { light: 1 }, nz: { light: 2 }, px: { light: 3 }, py: { light: 4 }, pz: { light: 5 } } },
+    { voxel_pos: [3, 1, 3] as vec3, faces: { nx: { light: 0 }, ny: { light: 1 }, nz: { light: 2 }, px: { light: 3 }, py: { light: 4 }, pz: { light: 5 } } }
 ]);
 
 // Setup vertex accessing
@@ -98,7 +97,7 @@ const keys_down: Record<string, true> = {};
 function draw() {
     requestAnimationFrame(draw);
 
-    // Update TODO: Looking needs to be clamped and x needs to wrap to avoid precision degradation
+    // Update
     if (keys_down["ArrowLeft"]) {
         camera_ang[0] += Math.PI * 0.02;
     }
@@ -141,7 +140,7 @@ function draw() {
     }
 
     const forward = [Math.sin(camera_ang[0]), Math.cos(camera_ang[0])];
-    camera_pos[0] += ((forward[0] * -heading[0]) + (forward[1] * heading[1])) * 0.1;  // TODO: Normalize movement vector.
+    camera_pos[0] += ((forward[0] * -heading[0]) + (forward[1] * heading[1])) * 0.1;
     camera_pos[2] += ((forward[1] * -heading[0]) + (forward[0] * -heading[1])) * 0.1;
 
     // Render

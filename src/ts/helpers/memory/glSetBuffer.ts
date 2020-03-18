@@ -57,9 +57,9 @@ export class GlSetBuffer {
      * PRECONDITION: This method expects that the target buffer is bound to the ARRAY_BUFFER register.
      * @param gl: The WebGL context used by the target buffer.
      * @param elements_view: An buffer containing the elements to add in contiguous memory. Each element in the buffer is
-     * of the specified word size and thus the buffer's length must be a multiple of the word size.
+     * of the specified word size and thus the buffer's length must be a multiple of the word size. Subarrays of buffers
+     * are currently not supported.
      * Each element buffer may not be mutated after being added to the set.
-     * TODO: Add support for TypedArray being a subarray.
      */
     addElements(gl: GlCtx, elements_view: TypedArray): SetBufferElem[] | null {
         const { elem_word_size, stored_data_mirror } = this;
