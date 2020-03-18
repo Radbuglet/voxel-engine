@@ -2,7 +2,7 @@
 import {mat4, vec3} from "gl-matrix";
 import VOXEL_VERTEX_SOURCE from "./../res/voxel.vert";
 import VOXEL_FRAG_SOURCE from "./../res/voxel.frag";
-import {VoxelChunkRenderer} from "./helpers/voxelChunkRenderer";
+import {VoxelChunkRenderer} from "./voxel-render-core/voxelChunkRenderer";
 
 const canvas = document.createElement("canvas");
 const gl = canvas.getContext("webgl")!;

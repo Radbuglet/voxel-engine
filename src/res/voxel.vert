@@ -30,11 +30,11 @@ void main() {  // TODO: Optimize all this processing!
     // Texture processing
     int texture_idx = int(floor(mat_data / 255.0));
     float second_part = mod(mat_data, 255.0);
+    light = floor(second_part / 4.0);
     float uv_encoded = mod(second_part, 4.0);
     uv = vec2(  // TODO: Take into acount the texture index.
         uv_encoded > 1.0 ? 1.0 : 0.0,
         mod(uv_encoded, 2.0) == 1.0 ? 1.0 : 0.0);
-    // TODO: Parse lighting data
 
     // Gl stuff
     gl_Position = projection * view * vec4(world_pos, 1.0);
