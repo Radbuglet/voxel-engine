@@ -59,7 +59,7 @@ export class VoxelChunkRenderer {
         let offset = 0;
         for (const additional_face of additional_faces) {
             const { face_def } = additional_face;
-            face_def.axis.appendQuad(elements, offset, additional_face.voxel_pointer.encoded_pos, face_def.axis_sign);
+            face_def.axis.appendQuad(elements, offset, additional_face.voxel_pointer.encoded_pos, 0, Math.floor(Math.random() * 32), face_def.axis_sign);
             offset += 12;
         }
 

@@ -16,18 +16,18 @@ export class GlSetBuffer {
      * @desc represents the number of bytes in the array. Also serves as the index to the root of any concat operation.
      * storage_write_idx and stored_data update in tandem.
      */
-    private storage_write_idx = 0;
+    private buffer_write_idx = 0;
 
     /**
      * @desc mirrors to buffers values in order and values. Used when resizing the buffer and removing elements.
      */
-    private stored_data_mirror: SetBufferElemInternal[] = [];
+    private elements_mirror: SetBufferElemInternal[] = [];
 
     /**
      * @desc returns the number of members of the set. This is the number of words in the set, not the number of bytes.
      */
     get element_count() {
-        return this.stored_data_mirror.length;
+        return this.elements_mirror.length;
     }
 
     /**
@@ -62,39 +62,39 @@ export class GlSetBuffer {
      * Each element buffer may not be mutated after being added to the set.
      */
     addElements(gl: GlCtx, elements_view: TypedArray): SetBufferElem[] | null {
-        const { elem_word_size, stored_data_mirror } = this;
-        const insertion_root_idx = this.storage_write_idx;
+        const { elem_word_size, elements_mirror } = this;
+        const insertion_root_idx = this.buffer_write_idx;
         console.assert(elements_view.byteLength % elem_word_size == 0);
 
         // Add the new elements to the CPU mirror; generate reference array for external uses.
         const element_references: SetBufferElem[] = new Array(elements_view.byteLength / elem_word_size);
-        const word_size_in_view = elem_word_size / elements_view.BYTES_PER_ELEMENT;
+        const elem_size_in_view = elem_word_size / elements_view.BYTES_PER_ELEMENT;
 
         let elem_ref_idx = 0;
         for (let elem_idx_in_view = 0; elem_idx_in_view < elements_view.byteLength / elements_view.BYTES_PER_ELEMENT; elem_idx_in_view += elem_word_size / elements_view.BYTES_PER_ELEMENT) {
             const elem_ref: SetBufferElemInternal = {
                 owner_set: this,
-                cpu_index: stored_data_mirror.length,
-                gpu_root_idx: this.storage_write_idx,
-                subarray_buffer: elements_view.subarray(elem_idx_in_view, elem_idx_in_view + word_size_in_view),
+                cpu_index: elements_mirror.length,
+                gpu_root_idx: this.buffer_write_idx,
+                subarray_buffer: elements_view.subarray(elem_idx_in_view, elem_idx_in_view + elem_size_in_view),
             };
-            stored_data_mirror.push(elem_ref);
+            elements_mirror.push(elem_ref);
             element_references[elem_ref_idx] = elem_ref;
-            this.storage_write_idx += elem_word_size;
+            this.buffer_write_idx += elem_word_size;
             elem_ref_idx++;
         }
 
         // Update GPU buffer
         try {
-            if (this.storage_write_idx > this.buffer_capacity) {  // We need to resize the array.
+            if (this.buffer_write_idx > this.buffer_capacity) {  // We need to resize the array.
                 this.resizeCapacity(gl);  // By rewriting array data to the new location, we effectively upload the new data so we can stop here.
             } else {  // There's still space in the buffer meaning we should just modify using bufferSubData()
                 gl.bufferSubData(gl.ARRAY_BUFFER, insertion_root_idx, elements_view);
             }
             return element_references;
         } catch (e) {  // Restore the CPU mirror to its previous state if the GPU insertion failed, effectively cancelling the operation.
-            stored_data_mirror.length = stored_data_mirror.length - element_references.length;  // Yup, this actually works like you'd expect it to.
-            this.storage_write_idx = insertion_root_idx;  // Since this value was copied before any modification happened, we can use it for this purpose as well.
+            elements_mirror.length = elements_mirror.length - element_references.length;  // Yup, this actually works like you'd expect it to.
+            this.buffer_write_idx = insertion_root_idx;  // Since this value was copied before any modification happened, we can use it for this purpose as well.
             return null;
         }
     }
@@ -106,19 +106,19 @@ export class GlSetBuffer {
      * @param removed_elem: The element to be removed.
      */
     removeElement(gl: GlCtx, removed_elem: SetBufferElemInternal) {
-        const { stored_data_mirror, elem_word_size } = this;
+        const { elements_mirror, elem_word_size } = this;
         console.assert(removed_elem.owner_set == this);
-        const last_element_index = stored_data_mirror.length - 1;
-        const last_element = stored_data_mirror[last_element_index];
+        const last_element_index = elements_mirror.length - 1;
+        const last_element = elements_mirror[last_element_index];
 
         // Move last element of array into the slot where the removed element resided to fill the gap. No need to remove the old last_element values.
         if (last_element != removed_elem) gl.bufferSubData(gl.ARRAY_BUFFER, removed_elem.gpu_root_idx, last_element.subarray_buffer);
         last_element.gpu_root_idx = removed_elem.gpu_root_idx;
-        this.storage_write_idx -= elem_word_size;
+        this.buffer_write_idx -= elem_word_size;
 
         // Update CPU mirror
-        this.stored_data_mirror[removed_elem.cpu_index] = last_element;  // Perform the same move on the CPU mirror. No need to check for whether or not this is necessary as the runtime tax is minimal.
-        this.stored_data_mirror.splice(last_element_index, 1);  // Removing the duplicate element in the CPU mirror is necessary however because we're using lists, not arrays.
+        this.elements_mirror[removed_elem.cpu_index] = last_element;  // Perform the same move on the CPU mirror. No need to check for whether or not this is necessary as the runtime tax is minimal.
+        this.elements_mirror.splice(last_element_index, 1);  // Removing the duplicate element in the CPU mirror is necessary however because we're using lists, not arrays.
         last_element.cpu_index = removed_elem.cpu_index;  // Steal the index from the element it replaced.
 
         removed_elem.owner_set = undefined;
@@ -143,7 +143,7 @@ export class GlSetBuffer {
         const rewrite_data_buffer = new Uint8Array(capacity);
         {
             let write_idx = 0;
-            for (const element of this.stored_data_mirror) {
+            for (const element of this.elements_mirror) {
                 const element_data_view = readTypedArrayBytes(element.subarray_buffer);
                 for (let byte_idx = 0; byte_idx < element_data_view.byteLength; byte_idx++) {
                     rewrite_data_buffer[write_idx + byte_idx] = element_data_view[byte_idx];
