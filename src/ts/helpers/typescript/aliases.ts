@@ -6,4 +6,5 @@ export type TypedArray = Int8Array | Uint8Array | Uint8ClampedArray
 
 export type RecordKeys = keyof any;
 export type RecordV<V> = Record<RecordKeys, V>;
+export type PartialRecord<K extends RecordKeys, V> = Partial<Record<K, V>>;
 export type IntBool = 0 | 1;
