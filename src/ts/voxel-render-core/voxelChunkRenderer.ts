@@ -1,12 +1,11 @@
 import {GlSetBuffer, SetBufferElem} from "../helpers/memory/glSetBuffer";
-import {GlCtx, IBool, Vec3Axis} from "../helpers/typescript/aliases";
+import {GlCtx, IntBool, Vec3Axis} from "../helpers/typescript/aliases";
 import {vec3} from "gl-matrix";
-import {encodeVertexPos, FACE_LIST, FaceDefinition, FaceKey} from "../voxel-data/faces";
+import {encodeChunkPos, FACE_LIST, FaceDefinition, FaceKey} from "../voxel-data/faces";
 import {ChunkVoxelPointer, VoxelChunkHeadless} from "../voxel-data/voxelChunkHeadless";
 
-// TODO: Document
 export type VoxelPlaceData = {
-    faces: Record<FaceKey, { light: number }>,
+    faces: Record<FaceKey, { light: number, texture: number }>,
     voxel_pos: vec3
 };
 export class VoxelChunkRenderer {
@@ -25,41 +24,46 @@ export class VoxelChunkRenderer {
         gl.drawArrays(gl.TRIANGLES, 0, this.face_set_manager.element_count * 6);  // There are 6 vertices per face. Draw uses vertex count. Therefore, we multiply by 6.
     }
 
-    handlePlacedVoxels(gl: GlCtx, chunk_data: VoxelChunkHeadless<any>, voxels: VoxelPlaceData[]) {  // TODO: Add support for "slab" blocks, materials, and lighting data; optimize; properly handle insertion failure.
+    handlePlacedVoxels(gl: GlCtx, chunk_data: VoxelChunkHeadless<any>, target_voxels: VoxelPlaceData[]) {  // TODO: Add support for "slab" blocks; properly handle insertion failure; adapt for removal of voxels.
         const { buffer, face_set_manager, faces } = this;
 
         // Determine faces to create while deleting all unnecessary faces.
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 
-        const additional_faces: { face_def: FaceDefinition, face_key: number, voxel_pointer: ChunkVoxelPointer<any> }[] = [];
-        for (const voxel of voxels) {
-            const voxel_pointer = chunk_data.getVoxelPointer(voxel.voxel_pos);
-            for (const face_def of FACE_LIST) {
-                const neighbor_pointer = voxel_pointer.getNeighbor(face_def);
-                console.assert(voxel_pointer.hasVoxel());
-                const has_neighbor = neighbor_pointer != null && neighbor_pointer.hasVoxel();
-                const chunk_faces_key = face_def.axis.encodeFace(voxel_pointer.encoded_pos, face_def.axis_sign);
+        type AddedFace = {
+            place_data: VoxelPlaceData, encoded_pos: number,
+            face: FaceDefinition, chunk_face_key: number
+        };
+        const added_faces: AddedFace[] = [];
+        for (const placed_voxel of target_voxels) {
+            const voxel_pointer = chunk_data.getVoxelPointer(placed_voxel.voxel_pos);
+            console.assert(voxel_pointer.hasVoxel());
 
-                if (has_neighbor) {  // Since this block used to be air and this face has a neighbor, we must delete the neighboring face.
-                    const face = faces.get(chunk_faces_key);
+            for (const face of FACE_LIST) {
+                const neighbor_voxel = voxel_pointer.getNeighbor(face);
+                const chunk_face_key = face.axis.encodeFaceKey(voxel_pointer.encoded_pos, face.axis_sign);
+                if (neighbor_voxel != null && neighbor_voxel.hasVoxel()) {  // Since this block used to be air and this face has a neighbor, we must delete the neighboring face.
+                    const face = faces.get(chunk_face_key);
                     if (face != null) {  // This check is here if that block doesn't have a face because it's being processed in the same batch as this voxel.
                         face_set_manager.removeElement(gl, face);
-                        faces.delete(chunk_faces_key);
+                        faces.delete(chunk_face_key);
                     }
-                }
-
-                if (!has_neighbor) {
-                    additional_faces.push({ face_def, face_key: chunk_faces_key, voxel_pointer: voxel_pointer });
+                } else  {
+                    added_faces.push({ place_data: placed_voxel, face, encoded_pos: voxel_pointer.encoded_pos, chunk_face_key });
                 }
             }
         }
 
         // Upload to buffer
-        const elements = new Uint16Array(additional_faces.length * 12);  // There are 12 shorts per face (2 shorts per vertex)
+        const elements = new Uint16Array(added_faces.length * 12);  // There are 12 shorts per face (2 shorts per vertex)
         let offset = 0;
-        for (const additional_face of additional_faces) {
-            const { face_def } = additional_face;
-            face_def.axis.appendQuad(elements, offset, additional_face.voxel_pointer.encoded_pos, 0, Math.floor(Math.random() * 32), face_def.axis_sign);
+        for (const additional_face of added_faces) {
+            const { face } = additional_face;
+            const face_material = additional_face.place_data.faces[face.towards_key];
+
+            face.axis.appendQuadData(
+                elements, offset, additional_face.encoded_pos, face.axis_sign,
+                face_material.texture, face_material.light);
             offset += 12;
         }
 
@@ -67,8 +71,8 @@ export class VoxelChunkRenderer {
         {
             let idx = 0;
             for (const cpu_ref of cpu_face_references) {
-                const additional_face = additional_faces[idx];
-                faces.set(additional_face.face_key, cpu_ref);
+                const additional_face = added_faces[idx];
+                faces.set(additional_face.chunk_face_key, cpu_ref);
                 idx++;
             }
         }

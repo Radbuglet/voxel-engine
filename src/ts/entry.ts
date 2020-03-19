@@ -1,11 +1,12 @@
-// TODO: The following code is temporary and will be replaced **in its entirety** when actually building the engine.
+// The following code is temporary and will be replaced **in its entirety** when actually building the engine.
+// (Same applies for the HTML as it lacks a lot of the required boilerplate for JS games)
 import {mat4, vec3} from "gl-matrix";
 import VOXEL_VERTEX_SOURCE from "./../res/voxel.vert";
 import VOXEL_FRAG_SOURCE from "./../res/voxel.frag";
 import {VoxelChunkRenderer, VoxelPlaceData} from "./voxel-render-core/voxelChunkRenderer";
 import {VoxelWorldHeadless} from "./voxel-data/voxelWorldHeadless";
 import {VoxelChunkHeadless} from "./voxel-data/voxelChunkHeadless";
-import {encodeVertexPos} from "./voxel-data/faces";
+import {encodeChunkPos} from "./voxel-data/faces";
 
 const canvas = document.createElement("canvas");
 const gl = canvas.getContext("webgl")!;
@@ -58,17 +59,25 @@ function placeVoxels(voxels: VoxelPlaceData[]) {
     }
     my_chunk_renderer.handlePlacedVoxels(gl, my_chunk_data, voxels);
 }
+const my_material_1 = {
+    nx: { light: 10, texture: 0 },
+    ny: { light: 10, texture: 0 },
+    nz: { light: 25, texture: 0 },
+    px: { light: 20, texture: 0 },
+    py: { light: 32, texture: 0 },
+    pz: { light: 20, texture: 0 }
+};
 placeVoxels([
-    { voxel_pos: [0, 0, 0] as vec3, faces: { nx: { light: 0 }, ny: { light: 1 }, nz: { light: 2 }, px: { light: 3 }, py: { light: 4 }, pz: { light: 5 } } },
-    { voxel_pos: [0, 1, 0] as vec3, faces: { nx: { light: 0 }, ny: { light: 1 }, nz: { light: 2 }, px: { light: 3 }, py: { light: 4 }, pz: { light: 5 } } },
-    { voxel_pos: [0, 2, 0] as vec3, faces: { nx: { light: 0 }, ny: { light: 1 }, nz: { light: 2 }, px: { light: 3 }, py: { light: 4 }, pz: { light: 5 } } },
-    { voxel_pos: [1, 0, 0] as vec3, faces: { nx: { light: 0 }, ny: { light: 1 }, nz: { light: 2 }, px: { light: 3 }, py: { light: 4 }, pz: { light: 5 } } },
-    { voxel_pos: [2, 0, 0] as vec3, faces: { nx: { light: 0 }, ny: { light: 1 }, nz: { light: 2 }, px: { light: 3 }, py: { light: 4 }, pz: { light: 5 } } },
-    { voxel_pos: [0, 0, 1] as vec3, faces: { nx: { light: 0 }, ny: { light: 1 }, nz: { light: 2 }, px: { light: 3 }, py: { light: 4 }, pz: { light: 5 } } },
-    { voxel_pos: [0, 0, 2] as vec3, faces: { nx: { light: 0 }, ny: { light: 1 }, nz: { light: 2 }, px: { light: 3 }, py: { light: 4 }, pz: { light: 5 } } },
-    { voxel_pos: [3, 3, 3] as vec3, faces: { nx: { light: 0 }, ny: { light: 1 }, nz: { light: 2 }, px: { light: 3 }, py: { light: 4 }, pz: { light: 5 } } },
-    { voxel_pos: [3, 2, 3] as vec3, faces: { nx: { light: 0 }, ny: { light: 1 }, nz: { light: 2 }, px: { light: 3 }, py: { light: 4 }, pz: { light: 5 } } },
-    { voxel_pos: [3, 1, 3] as vec3, faces: { nx: { light: 0 }, ny: { light: 1 }, nz: { light: 2 }, px: { light: 3 }, py: { light: 4 }, pz: { light: 5 } } }
+    { voxel_pos: [0, 0, 0] as vec3, faces: my_material_1 },
+    { voxel_pos: [0, 1, 0] as vec3, faces: my_material_1 },
+    { voxel_pos: [0, 2, 0] as vec3, faces: my_material_1 },
+    { voxel_pos: [1, 0, 0] as vec3, faces: my_material_1 },
+    { voxel_pos: [2, 0, 0] as vec3, faces: my_material_1 },
+    { voxel_pos: [0, 0, 1] as vec3, faces: my_material_1 },
+    { voxel_pos: [0, 0, 2] as vec3, faces: my_material_1 },
+    { voxel_pos: [3, 3, 3] as vec3, faces: my_material_1 },
+    { voxel_pos: [3, 2, 3] as vec3, faces: my_material_1 },
+    { voxel_pos: [3, 1, 3] as vec3, faces: my_material_1 }
 ]);
 
 // Setup vertex accessing

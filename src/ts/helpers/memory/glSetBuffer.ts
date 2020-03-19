@@ -38,14 +38,14 @@ export class GlSetBuffer {
      * during resizing.
      * PRECONDITION: The buffer this class operates on must only be operated on by this manager.
      *
-     * @param elem_word_size: The size in bytes of each element. Must be an integer!
+     * @param elem_byte_size: The size in bytes of each element. Must be an integer!
      * @param buffer_capacity: The current capacity of the buffer.
      * @param get_ideal_capacity: A function which returns the ideal capacity in elements for the buffer given required
      * capacity (also in elements count). Useful for allocating a bit more than necessary so that element addition doesn't always
      * require reallocation.
      */
     constructor(
-        private readonly elem_word_size: number,
+        private readonly elem_byte_size: number,
         private buffer_capacity: number,
         private readonly get_ideal_capacity: IdealCapacityGetter
     ) {}
@@ -62,26 +62,27 @@ export class GlSetBuffer {
      * Each element buffer may not be mutated after being added to the set.
      */
     addElements(gl: GlCtx, elements_view: TypedArray): SetBufferElem[] | null {
-        const { elem_word_size, elements_mirror } = this;
+        const { elem_byte_size, elements_mirror } = this;
         const insertion_root_idx = this.buffer_write_idx;
-        console.assert(elements_view.byteLength % elem_word_size == 0);
+        console.assert(elements_view.byteLength % elem_byte_size == 0);
 
         // Add the new elements to the CPU mirror; generate reference array for external uses.
-        const element_references: SetBufferElem[] = new Array(elements_view.byteLength / elem_word_size);
-        const elem_size_in_view = elem_word_size / elements_view.BYTES_PER_ELEMENT;
-
-        let elem_ref_idx = 0;
-        for (let elem_idx_in_view = 0; elem_idx_in_view < elements_view.byteLength / elements_view.BYTES_PER_ELEMENT; elem_idx_in_view += elem_word_size / elements_view.BYTES_PER_ELEMENT) {
-            const elem_ref: SetBufferElemInternal = {
-                owner_set: this,
-                cpu_index: elements_mirror.length,
-                gpu_root_idx: this.buffer_write_idx,
-                subarray_buffer: elements_view.subarray(elem_idx_in_view, elem_idx_in_view + elem_size_in_view),
-            };
-            elements_mirror.push(elem_ref);
-            element_references[elem_ref_idx] = elem_ref;
-            this.buffer_write_idx += elem_word_size;
-            elem_ref_idx++;
+        const element_references: SetBufferElem[] = new Array(elements_view.byteLength / elem_byte_size);
+        {
+            const elem_size_in_view = elem_byte_size / elements_view.BYTES_PER_ELEMENT;
+            let iterator_ref_idx = 0;
+            for (let iterator_view_idx = 0; iterator_view_idx < elements_view.byteLength / elements_view.BYTES_PER_ELEMENT; iterator_view_idx += elem_byte_size / elements_view.BYTES_PER_ELEMENT) {
+                const element_cpu_ref: SetBufferElemInternal = {
+                    owner_set: this,
+                    cpu_index: elements_mirror.length,
+                    gpu_root_idx: this.buffer_write_idx,
+                    subarray_buffer: elements_view.subarray(iterator_view_idx, iterator_view_idx + elem_size_in_view),
+                };
+                elements_mirror.push(element_cpu_ref);
+                element_references[iterator_ref_idx] = element_cpu_ref;
+                this.buffer_write_idx += elem_byte_size;
+                iterator_ref_idx++;
+            }
         }
 
         // Update GPU buffer
@@ -103,25 +104,25 @@ export class GlSetBuffer {
      * @desc Removes an element from the set. No buffer capacity resizing is ever done by this method.
      * PRECONDITION: This method expects that the target buffer is bound to the ARRAY_BUFFER register.
      * @param gl: The WebGL context used by the target buffer.
-     * @param removed_elem: The element to be removed.
+     * @param removed_element: The element to be removed.
      */
-    removeElement(gl: GlCtx, removed_elem: SetBufferElemInternal) {
-        const { elements_mirror, elem_word_size } = this;
-        console.assert(removed_elem.owner_set == this);
+    removeElement(gl: GlCtx, removed_element: SetBufferElemInternal) {
+        const { elements_mirror, elem_byte_size } = this;
+        console.assert(removed_element.owner_set == this);
         const last_element_index = elements_mirror.length - 1;
         const last_element = elements_mirror[last_element_index];
 
         // Move last element of array into the slot where the removed element resided to fill the gap. No need to remove the old last_element values.
-        if (last_element != removed_elem) gl.bufferSubData(gl.ARRAY_BUFFER, removed_elem.gpu_root_idx, last_element.subarray_buffer);
-        last_element.gpu_root_idx = removed_elem.gpu_root_idx;
-        this.buffer_write_idx -= elem_word_size;
+        if (last_element != removed_element) gl.bufferSubData(gl.ARRAY_BUFFER, removed_element.gpu_root_idx, last_element.subarray_buffer);
+        last_element.gpu_root_idx = removed_element.gpu_root_idx;
+        this.buffer_write_idx -= elem_byte_size;
 
         // Update CPU mirror
-        this.elements_mirror[removed_elem.cpu_index] = last_element;  // Perform the same move on the CPU mirror. No need to check for whether or not this is necessary as the runtime tax is minimal.
+        this.elements_mirror[removed_element.cpu_index] = last_element;  // Perform the same move on the CPU mirror. No need to check for whether or not this is necessary as the runtime tax is minimal.
         this.elements_mirror.splice(last_element_index, 1);  // Removing the duplicate element in the CPU mirror is necessary however because we're using lists, not arrays.
-        last_element.cpu_index = removed_elem.cpu_index;  // Steal the index from the element it replaced.
+        last_element.cpu_index = removed_element.cpu_index;  // Steal the index from the element it replaced.
 
-        removed_elem.owner_set = undefined;
+        removed_element.owner_set = undefined;
     }
 
     /**
@@ -134,13 +135,13 @@ export class GlSetBuffer {
      * state changes.
      */
     resizeCapacity(gl: GlCtx) {
-        const { elem_word_size, element_count } = this;
+        const { elem_byte_size, element_count } = this;
         // Figure out new buffer capacity size
-        const capacity = GlSetBuffer.getIdealCapacityBytes(elem_word_size, element_count, this.get_ideal_capacity);  // Capacity is in bytes, despite get_ideal_capacity returning words.
-        if (capacity == this.buffer_capacity) return;  // Nothing will change so we ignore this operation.
+        const new_capacity = GlSetBuffer.getIdealCapacityBytes(elem_byte_size, element_count, this.get_ideal_capacity);  // Capacity is in bytes, despite get_ideal_capacity returning words.
+        if (new_capacity == this.buffer_capacity) return;  // Nothing will change so we ignore this operation.
 
         // Generate data buffer to upload
-        const rewrite_data_buffer = new Uint8Array(capacity);
+        const rewrite_data_buffer = new Uint8Array(new_capacity);
         {
             let write_idx = 0;
             for (const element of this.elements_mirror) {
@@ -148,13 +149,13 @@ export class GlSetBuffer {
                 for (let byte_idx = 0; byte_idx < element_data_view.byteLength; byte_idx++) {
                     rewrite_data_buffer[write_idx + byte_idx] = element_data_view[byte_idx];
                 }
-                write_idx += elem_word_size;
+                write_idx += elem_byte_size;
             }
         }
 
         // Upload it!
         gl.bufferData(gl.ARRAY_BUFFER, rewrite_data_buffer, gl.DYNAMIC_DRAW);
-        this.buffer_capacity = capacity;
+        this.buffer_capacity = new_capacity;
     }
 
     /**

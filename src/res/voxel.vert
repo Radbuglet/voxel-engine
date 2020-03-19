@@ -1,7 +1,7 @@
 precision mediump float;
 
 // Configuration constants
-const float CHUNK_SIZE = 18.0;  // The chunk size is always 2 more than the amount of blocks in the chunk.
+const float POS_ENCODING_CHUNK_DIM = 18.0;  // The chunk size is always 2 more than the amount of blocks in the chunk.
 const float VOXEL_WORLD_SIZE = 1.0;
 
 const float TEXTURE_FRAMES_CX = 1.0;
@@ -26,13 +26,13 @@ attribute vec2 vertex_data;  // (pos_idx, material: 8<texture_id> 6<light> 2<uv>
 varying float light;
 varying vec2 uv;
 
-void main() {  // TODO: Optimize all this processing!
+void main() {
     // Voxel world position resolver
-    float vy_unwrapped = floor(pos_idx / CHUNK_SIZE);
+    float vy_unwrapped = floor(pos_idx / POS_ENCODING_CHUNK_DIM);
     vec3 world_pos = VOXEL_WORLD_SIZE * (chunk_pos + vec3(
-        mod(pos_idx, CHUNK_SIZE),
-        mod(vy_unwrapped, CHUNK_SIZE),
-        floor(vy_unwrapped / CHUNK_SIZE)
+        mod(pos_idx, POS_ENCODING_CHUNK_DIM),
+        mod(vy_unwrapped, POS_ENCODING_CHUNK_DIM),
+        floor(vy_unwrapped / POS_ENCODING_CHUNK_DIM)
     ));
 
     // Texture processing

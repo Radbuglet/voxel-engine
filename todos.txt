@@ -1,3 +1,4 @@
 TODO: Optimize the project's abstractions
 TODO: Rename voxel terminology to be more consistent and precise
 TODO: Clean up project
+TODO: Document remaining classes

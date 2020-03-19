@@ -1,5 +1,5 @@
 import {vec3} from "gl-matrix";
-import {CHUNK_BLOCK_COUNT, encodeVertexPos, FaceDefinition, FaceKey} from "./faces";
+import {CHUNK_BLOCK_COUNT, encodeChunkPos, FaceDefinition, FaceKey} from "./faces";
 import {TGeneric_VoxelHeadless} from "./voxelWorldHeadless";
 
 export interface ProvidesVoxelChunkHeadless<TGeneric extends TGeneric_VoxelHeadless<TGeneric>> {
@@ -27,7 +27,7 @@ export class VoxelChunkHeadless<TGeneric extends TGeneric_VoxelHeadless<TGeneric
      * @param rel_pos: Position of voxel in chunk relative space.
      */
     getVoxelPointer(rel_pos: vec3): ChunkVoxelPointer<TGeneric["voxel"]> {
-        return new ChunkVoxelPointer<TGeneric>(this, rel_pos, encodeVertexPos(rel_pos));
+        return new ChunkVoxelPointer<TGeneric>(this, rel_pos, encodeChunkPos(rel_pos));
     }
 
     /**
@@ -44,7 +44,7 @@ export class VoxelChunkHeadless<TGeneric extends TGeneric_VoxelHeadless<TGeneric
  */
 export class ChunkVoxelPointer<TGeneric extends TGeneric_VoxelHeadless<TGeneric>> {
     constructor(public readonly chunk: TGeneric["chunk"], public pos: vec3, public encoded_pos: number) {
-        this.encoded_pos = encodeVertexPos(pos);
+        this.encoded_pos = encodeChunkPos(pos);
     }
 
     /**
@@ -58,7 +58,7 @@ export class ChunkVoxelPointer<TGeneric extends TGeneric_VoxelHeadless<TGeneric>
         if (new_pos[face.axis.vec_axis] < 0 || new_pos[face.axis.vec_axis] >= CHUNK_BLOCK_COUNT) {  // No longer in the chunk bounds.
             const new_chunk = this.chunk.voxel_chunk_headless.neighbors.get(face.towards_key);
             if (new_chunk == null) return null;
-            return new ChunkVoxelPointer<TGeneric>(new_chunk, new_pos, encodeVertexPos(new_pos));
+            return new ChunkVoxelPointer<TGeneric>(new_chunk, new_pos, encodeChunkPos(new_pos));
         } else {
             return new ChunkVoxelPointer<TGeneric>(this.chunk, new_pos, this.encoded_pos + face.encoded_relative);
         }
@@ -99,7 +99,7 @@ export class ChunkVoxelPointer<TGeneric extends TGeneric_VoxelHeadless<TGeneric>
      * @param chunk_pos: Position of target voxel in chunk relative space.
      */
     moveTo(chunk_pos: vec3) {
-        this.encoded_pos = encodeVertexPos(chunk_pos);
+        this.encoded_pos = encodeChunkPos(chunk_pos);
         this.pos = chunk_pos;
     }
 }

@@ -1,14 +1,16 @@
 import {vec3} from "gl-matrix";
-import {IBool, Vec3Axis} from "../helpers/typescript/aliases";
+import {IntBool, Vec3Axis} from "../helpers/typescript/aliases";
 
-const CHUNK_ENCODING_SIZE = 18;  // Must be the same as the constant in the vertex shader.
-export const CHUNK_BLOCK_COUNT = CHUNK_ENCODING_SIZE - 2;
-const CHUNK_SIZE_SQUARED = CHUNK_ENCODING_SIZE * CHUNK_ENCODING_SIZE;
-export const FACE_UNIT_AXIS_ENCODED = [1, CHUNK_ENCODING_SIZE, CHUNK_SIZE_SQUARED];
-export function encodeVertexPos(pos: vec3) {
-    return pos[0] + pos[1] * CHUNK_ENCODING_SIZE + pos[2] * CHUNK_SIZE_SQUARED;
+// Chunk position encoding
+const POS_ENCODING_CHUNK_DIM = 18;  // Must be the same as the constant in the vertex shader.
+const ENCODING_DIM_SQUARED = POS_ENCODING_CHUNK_DIM * POS_ENCODING_CHUNK_DIM;
+export const UNIT_AXIS_ENCODED = [1, POS_ENCODING_CHUNK_DIM, ENCODING_DIM_SQUARED];
+export const CHUNK_BLOCK_COUNT = POS_ENCODING_CHUNK_DIM - 2;
+export function encodeChunkPos(pos: vec3) {
+    return pos[0] + pos[1] * POS_ENCODING_CHUNK_DIM + pos[2] * ENCODING_DIM_SQUARED;
 }
 
+// Face axis
 type EncodedAxisVertex = {
     pos: number,
     uv: number
@@ -18,18 +20,18 @@ export class FaceAxis {
     private readonly encoded_vertices: EncodedAxisVertex[];
     private readonly face_opp_rel_encoded: number;
 
-    constructor(faces_conf: { pos: [IBool, IBool, IBool], uv: [IBool, IBool] }[], public readonly vec_axis: Vec3Axis) {
+    constructor(faces_conf: { pos: [IntBool, IntBool, IntBool], uv: [IntBool, IntBool] }[], public readonly vec_axis: Vec3Axis) {
         this.encoded_vertices = faces_conf.map(face => {
             const { pos, uv } = face;
             return {
-                pos: encodeVertexPos(pos),
+                pos: encodeChunkPos(pos),
                 uv: uv[0] + 2 * uv[1]
             }
         });
-        this.face_opp_rel_encoded = FACE_UNIT_AXIS_ENCODED[vec_axis];
+        this.face_opp_rel_encoded = UNIT_AXIS_ENCODED[vec_axis];
     }
 
-    appendQuad(target: Uint16Array, target_offset: number, encoded_origin: number, face_texture: number, face_light: number, sign: IBool) {
+    appendQuadData(target: Uint16Array, target_offset: number, encoded_origin: number, sign: IntBool, face_texture: number, face_light: number) {
         const { encoded_vertices, face_opp_rel_encoded } = this;
         const common_vert_pos_encoded = encoded_origin + (sign == 1 ? face_opp_rel_encoded : 0);
         const common_material_encoded = face_light * 4 + face_texture * 255;
@@ -48,7 +50,7 @@ export class FaceAxis {
         writeVertex(10, encoded_vertices[sign == 0 ? 4 : 5]);
     }
 
-    encodeFace(encoded_origin: number, sign: IBool) {
+    encodeFaceKey(encoded_origin: number, sign: IntBool) {
         const { vec_axis, face_opp_rel_encoded } = this;
         return encoded_origin + (sign == 1 ? face_opp_rel_encoded : 0) + vec_axis / 10;
     }
@@ -90,44 +92,45 @@ export const FACE_AXIS = {
     ], 2)
 };
 
+// Cube faces
 export type FaceKey = "px" |"py" | "pz" | "nx" |"ny" | "nz";
 export type FaceDefinition = {
     vec_relative: vec3,
     encoded_relative: number,
     axis: FaceAxis,
-    axis_sign: IBool,
+    axis_sign: IntBool,
     towards_key: FaceKey,
     inverse_key: FaceKey
 };
 
 export const FACES: Record<"nx" | "ny" | "nz" | "px" | "py" | "pz", FaceDefinition> = {
     nx: {
-        vec_relative: [-1, 0, 0], encoded_relative: -FACE_UNIT_AXIS_ENCODED[0],
+        vec_relative: [-1, 0, 0], encoded_relative: -UNIT_AXIS_ENCODED[0],
         axis: FACE_AXIS.X, axis_sign: 0,
         towards_key: "nx", inverse_key: "px"
     },
     px: {
-        vec_relative: [1, 0, 0], encoded_relative:  FACE_UNIT_AXIS_ENCODED[0],
+        vec_relative: [1, 0, 0], encoded_relative:  UNIT_AXIS_ENCODED[0],
         axis: FACE_AXIS.X, axis_sign: 1,
         towards_key: "px", inverse_key: "nx"
     },
     ny: {
-        vec_relative: [0, -1, 0], encoded_relative: -FACE_UNIT_AXIS_ENCODED[1],
+        vec_relative: [0, -1, 0], encoded_relative: -UNIT_AXIS_ENCODED[1],
         axis: FACE_AXIS.Y, axis_sign: 0,
         towards_key: "ny", inverse_key: "py"
     },
     py: {
-        vec_relative: [0, 1, 0], encoded_relative:  FACE_UNIT_AXIS_ENCODED[1],
+        vec_relative: [0, 1, 0], encoded_relative:  UNIT_AXIS_ENCODED[1],
         axis: FACE_AXIS.Y, axis_sign: 1,
         towards_key: "py", inverse_key: "ny"
     },
     nz: {
-        vec_relative: [0, 0, -1], encoded_relative: -FACE_UNIT_AXIS_ENCODED[2],
+        vec_relative: [0, 0, -1], encoded_relative: -UNIT_AXIS_ENCODED[2],
         axis: FACE_AXIS.Z, axis_sign: 0,
         towards_key: "nz", inverse_key: "pz"
     },
     pz: {
-        vec_relative: [0, 0, 1], encoded_relative:  FACE_UNIT_AXIS_ENCODED[2],
+        vec_relative: [0, 0, 1], encoded_relative:  UNIT_AXIS_ENCODED[2],
         axis: FACE_AXIS.Z, axis_sign: 1,
         towards_key: "pz", inverse_key: "nz"
     }

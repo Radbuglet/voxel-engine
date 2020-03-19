@@ -6,4 +6,4 @@ export type TypedArray = Int8Array | Uint8Array | Uint8ClampedArray
 
 export type RecordKeys = keyof any;
 export type RecordV<V> = Record<RecordKeys, V>;
-export type IBool = 0 | 1;
+export type IntBool = 0 | 1;
