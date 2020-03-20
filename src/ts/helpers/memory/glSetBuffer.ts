@@ -51,26 +51,29 @@ export class GlSetBuffer {
     ) {}
 
     /**
-     *desc Adds one or more elements to the set and returns their CPU mirrored references. The method will resize the buffer
-     * if the buffer's capacity is too small to accommodate the new elements. If the insertion into the buffer fails, the
-     * operation will be cancelled and null will be returned.
+     * @desc Adds one or more elements to the set and returns their CPU mirrored references. The method will resize the buffer
+     * if the buffer's capacity is too small to accommodate the new elements. Throughout the insertion, handle_new_ref() will
+     * be called for every new element reference it generates. If the operation fails, false will be returned at the end but
+     * it will be the user's responsibility to undo actions performed in handle_new_ref() as well as on other CPU copies
+     * not managed by this class as these function calls happen before the exception may be thrown.
+     * If everything ran smoothly, true is returned.
      * PRECONDITION: This method expects that the target buffer is bound to the ARRAY_BUFFER register.
      * @param gl: The WebGL context used by the target buffer.
      * @param elements_view: An buffer containing the elements to add in contiguous memory. Each element in the buffer is
      * of the specified word size and thus the buffer's length must be a multiple of the word size. Subarrays of buffers
-     * are currently not supported.
-     * Each element buffer may not be mutated after being added to the set.
+     * are currently not supported. The element buffer may not be mutated after being added to the set.
+     * @param handle_new_ref: A method called during the insertion of the elements. See description for warnings about
+     * its usage.
      */
-    addElements(gl: GlCtx, elements_view: TypedArray): SetBufferElem[] | null {
+    addElementsExternRefHandle(gl: GlCtx, elements_view: TypedArray, handle_new_ref: (idx_in_upload: number, elem_ref: SetBufferElem) => void): boolean {
         const { elem_byte_size, elements_mirror } = this;
         const insertion_root_idx = this.buffer_write_idx;
         console.assert(elements_view.byteLength % elem_byte_size == 0);
 
         // Add the new elements to the CPU mirror; generate reference array for external uses.
-        const element_references: SetBufferElem[] = new Array(elements_view.byteLength / elem_byte_size);
         {
             const elem_size_in_view = elem_byte_size / elements_view.BYTES_PER_ELEMENT;
-            let iterator_ref_idx = 0;
+            let idx_in_upload = 0;
             for (let iterator_view_idx = 0; iterator_view_idx < elements_view.byteLength / elements_view.BYTES_PER_ELEMENT; iterator_view_idx += elem_byte_size / elements_view.BYTES_PER_ELEMENT) {
                 const element_cpu_ref: SetBufferElemInternal = {
                     owner_set: this,
@@ -79,9 +82,9 @@ export class GlSetBuffer {
                     subarray_buffer: elements_view.subarray(iterator_view_idx, iterator_view_idx + elem_size_in_view),
                 };
                 elements_mirror.push(element_cpu_ref);
-                element_references[iterator_ref_idx] = element_cpu_ref;
+                handle_new_ref(idx_in_upload, element_cpu_ref);
                 this.buffer_write_idx += elem_byte_size;
-                iterator_ref_idx++;
+                idx_in_upload++;
             }
         }
 
@@ -92,10 +95,26 @@ export class GlSetBuffer {
             } else {  // There's still space in the buffer meaning we should just modify using bufferSubData()
                 gl.bufferSubData(gl.ARRAY_BUFFER, insertion_root_idx, elements_view);
             }
-            return element_references;
+            return true;
         } catch (e) {  // Restore the CPU mirror to its previous state if the GPU insertion failed, effectively cancelling the operation.
-            elements_mirror.length = elements_mirror.length - element_references.length;  // Yup, this actually works like you'd expect it to.
+            elements_mirror.length = elements_mirror.length - elements_view.byteLength / elem_byte_size;  // Yup, this actually works like you'd expect it to.
             this.buffer_write_idx = insertion_root_idx;  // Since this value was copied before any modification happened, we can use it for this purpose as well.
+            return false;
+        }
+    }
+
+    /**
+     * @desc Wraps addElementsExternRefHandle and caches the created references in an array, returning them if the operation
+     * is successful and returning null if the operation failed.
+     * Same restrictions, preconditions and warnings apply.
+     */
+    addElements(gl: GlCtx, elements_view: TypedArray) {
+        const elements: SetBufferElem[] = new Array(elements_view.byteLength / this.elem_byte_size);
+        if (this.addElementsExternRefHandle(gl, elements_view, (idx, ref) => {
+            elements[idx] = ref;
+        })) {
+            return elements;
+        } else {
             return null;
         }
     }

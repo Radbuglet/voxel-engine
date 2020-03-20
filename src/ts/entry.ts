@@ -3,10 +3,9 @@
 import {mat4, vec3} from "gl-matrix";
 import VOXEL_VERTEX_SOURCE from "./../res/voxel.vert";
 import VOXEL_FRAG_SOURCE from "./../res/voxel.frag";
-import {VoxelChunkRenderer, VoxelPlaceData} from "./voxel-render-core/voxelChunkRenderer";
 import {VoxelWorldHeadless} from "./voxel-data/voxelWorldHeadless";
 import {VoxelChunkHeadless} from "./voxel-data/voxelChunkHeadless";
-import {encodeChunkPos} from "./voxel-data/faces";
+import {VoxelChunkRenderer} from "./voxel-render-core/voxelChunkRenderer";
 
 const canvas = document.createElement("canvas");
 const gl = canvas.getContext("webgl")!;
@@ -46,38 +45,31 @@ const render_program = loadProgram(VOXEL_VERTEX_SOURCE, VOXEL_FRAG_SOURCE);
 
 // Setup the chunk data array buffer
 const array_buffer = gl.createBuffer()!;
-const world_data = new VoxelWorldHeadless();
-const my_chunk_data = new VoxelChunkHeadless();
-world_data.makeChunk([0, 0, 0], my_chunk_data);
-const my_chunk_renderer = new VoxelChunkRenderer(gl, array_buffer);
+const data_world = new VoxelWorldHeadless<any>();
+const data_chunk = new VoxelChunkHeadless<any>();
+data_world.putChunk([0, 0, 0], data_world);
+const chunk_renderer = new VoxelChunkRenderer(gl, array_buffer);
 
-function placeVoxels(voxels: VoxelPlaceData[]) {
-    const write_pointer = my_chunk_data.getVoxelPointer(voxels[0].voxel_pos);
+function updateVoxels(voxels: [vec3, boolean][]) {
+    const voxel_write_pointer = data_chunk.getVoxelPointer([0, 0, 0]);
     for (const voxel of voxels) {
-        write_pointer.moveTo(voxel.voxel_pos);
-        write_pointer.setData(true);
+        voxel_write_pointer.moveTo(voxel[0]);
+        if (voxel[1]) {
+            voxel_write_pointer.setData(true);
+        } else {
+            voxel_write_pointer.removeVoxel();
+        }
     }
-    my_chunk_renderer.handlePlacedVoxels(gl, my_chunk_data, voxels);
+
+    chunk_renderer.handleModifiedVoxelPlacements(gl, data_chunk, voxels.map(voxel => voxel[0]));
 }
-const my_material_1 = {
-    nx: { light: 10, texture: 0 },
-    ny: { light: 10, texture: 0 },
-    nz: { light: 25, texture: 0 },
-    px: { light: 20, texture: 0 },
-    py: { light: 32, texture: 0 },
-    pz: { light: 20, texture: 0 }
-};
-placeVoxels([
-    { voxel_pos: [0, 0, 0] as vec3, faces: my_material_1 },
-    { voxel_pos: [0, 1, 0] as vec3, faces: my_material_1 },
-    { voxel_pos: [0, 2, 0] as vec3, faces: my_material_1 },
-    { voxel_pos: [1, 0, 0] as vec3, faces: my_material_1 },
-    { voxel_pos: [2, 0, 0] as vec3, faces: my_material_1 },
-    { voxel_pos: [0, 0, 1] as vec3, faces: my_material_1 },
-    { voxel_pos: [0, 0, 2] as vec3, faces: my_material_1 },
-    { voxel_pos: [3, 3, 3] as vec3, faces: my_material_1 },
-    { voxel_pos: [3, 2, 3] as vec3, faces: my_material_1 },
-    { voxel_pos: [3, 1, 3] as vec3, faces: my_material_1 }
+(window as any).updateVoxels = updateVoxels;
+updateVoxels([
+    [[0, 0, 0], true],
+    [[1, 0, 0], true],
+    [[2, 0, 0], true],
+    [[3, 0, 0], true],
+    [[4, 0, 0], true]
 ]);
 
 // Setup vertex accessing
@@ -161,7 +153,7 @@ function draw() {
     gl.uniformMatrix4fv(upos_view, false, view_mat);
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    my_chunk_renderer.draw(gl);
+    chunk_renderer.draw(gl);
 }
 
 draw();

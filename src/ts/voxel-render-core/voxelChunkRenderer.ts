@@ -1,12 +1,16 @@
 import {GlSetBuffer, SetBufferElem} from "../helpers/memory/glSetBuffer";
 import {GlCtx, IntBool, Vec3Axis} from "../helpers/typescript/aliases";
 import {vec3} from "gl-matrix";
-import {encodeChunkPos, FACE_LIST, FaceDefinition, FaceKey} from "../voxel-data/faces";
+import {encodeChunkPos, FACES_LIST, FaceDefinition, FaceKey} from "../voxel-data/faces";
 import {ChunkVoxelPointer, VoxelChunkHeadless} from "../voxel-data/voxelChunkHeadless";
 
-export type VoxelPlaceData = {
-    faces: Record<FaceKey, { light: number, texture: number }>,
-    voxel_pos: vec3
+type FaceToAdd = {
+    encoded_voxel_pos: number,
+    encoded_face_key: number,
+    face_definition: FaceDefinition,
+    mat_texture: number,
+    mat_light: number,
+    cull_side: boolean
 };
 export class VoxelChunkRenderer {
     private readonly face_set_manager: GlSetBuffer;
@@ -24,57 +28,81 @@ export class VoxelChunkRenderer {
         gl.drawArrays(gl.TRIANGLES, 0, this.face_set_manager.element_count * 6);  // There are 6 vertices per face. Draw uses vertex count. Therefore, we multiply by 6.
     }
 
-    handlePlacedVoxels(gl: GlCtx, chunk_data: VoxelChunkHeadless<any>, target_voxels: VoxelPlaceData[]) {  // TODO: Add support for "slab" blocks; properly handle insertion failure; adapt for removal of voxels.
-        const { buffer, face_set_manager, faces } = this;
+    handleModifiedVoxelPlacements(gl: GlCtx, chunk_data: VoxelChunkHeadless<any>, modified_locations: Iterable<vec3>) {  // TODO: Add support for slabs and proper materials
+        const { face_set_manager, faces } = this;
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
 
-        // Determine faces to create while deleting all unnecessary faces.
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        // Find faces to add; remove bad faces
+        const faces_to_add: FaceToAdd[] = [];
+        {
+            function deleteFace(encoded_face_key: number) {
+                const face_ref = faces.get(encoded_face_key);
+                if (face_ref != null) {
+                    face_set_manager.removeElement(gl, face_ref);
+                    faces.delete(encoded_face_key);
+                }
+            }
 
-        type AddedFace = {
-            place_data: VoxelPlaceData, encoded_pos: number,
-            face: FaceDefinition, chunk_face_key: number
-        };
-        const added_faces: AddedFace[] = [];
-        for (const placed_voxel of target_voxels) {
-            const voxel_pointer = chunk_data.getVoxelPointer(placed_voxel.voxel_pos);
-            console.assert(voxel_pointer.hasVoxel());
+            const root_pointer = chunk_data.getVoxelPointer(vec3.create());
+            for (const root_vec of modified_locations) {
+                root_pointer.moveTo(root_vec);
+                const root_now_solid = root_pointer.hasVoxel();
 
-            for (const face of FACE_LIST) {
-                const neighbor_voxel = voxel_pointer.getNeighbor(face);
-                const chunk_face_key = face.axis.encodeFaceKey(voxel_pointer.encoded_pos, face.axis_sign);
-                if (neighbor_voxel != null && neighbor_voxel.hasVoxel()) {  // Since this block used to be air and this face has a neighbor, we must delete the neighboring face.
-                    const face = faces.get(chunk_face_key);
-                    if (face != null) {  // This check is here if that block doesn't have a face because it's being processed in the same batch as this voxel.
-                        face_set_manager.removeElement(gl, face);
-                        faces.delete(chunk_face_key);
+                for (const neighboring_face of FACES_LIST) {
+                    const neighbor_pointer = root_pointer.getNeighbor(neighboring_face);
+                    const neighbor_is_solid = neighbor_pointer != null && neighbor_pointer.hasVoxel();
+                    const encoded_face_key = neighboring_face.axis.encodeFaceKey(root_pointer.encoded_pos, neighboring_face.axis_sign);
+                    function addThisFace(texture: number, light: number, cull_side: boolean) {
+                        faces_to_add.push({
+                            face_definition: neighboring_face,
+                            encoded_voxel_pos: root_pointer.encoded_pos,
+                            encoded_face_key,
+                            mat_texture: texture,
+                            mat_light: light,
+                            cull_side
+                        });
                     }
-                } else  {
-                    added_faces.push({ place_data: placed_voxel, face, encoded_pos: voxel_pointer.encoded_pos, chunk_face_key });
+
+                    if (root_now_solid) {  // Modification is placing
+                        if (neighbor_is_solid) {  // We might need to remove a redundant face
+                            deleteFace(encoded_face_key);
+                        } else {  // We need to place a face there
+                            addThisFace(0, 32, neighboring_face.axis_sign == 0);  // TODO: Use material
+                        }
+
+                    } else {  // Modification is breaking
+                        if (neighbor_is_solid) {  // We need to place a face here
+                            addThisFace(0, 32, neighboring_face.axis_sign == 1); // TODO: Use material
+                        } else {  // This is one of our faces and we need to delete it.
+                            deleteFace(encoded_face_key);
+                        }
+                    }
                 }
             }
         }
 
-        // Upload to buffer
-        const elements = new Uint16Array(added_faces.length * 12);  // There are 12 shorts per face (2 shorts per vertex)
-        let offset = 0;
-        for (const additional_face of added_faces) {
-            const { face } = additional_face;
-            const face_material = additional_face.place_data.faces[face.towards_key];
-
-            face.axis.appendQuadData(
-                elements, offset, additional_face.encoded_pos, face.axis_sign,
-                face_material.texture, face_material.light);
-            offset += 12;
-        }
-
-        const cpu_face_references = face_set_manager.addElements(gl, elements)!;
+        // Add new faces
+        const face_elements_buffer = new Uint16Array(faces_to_add.length * 12);
         {
-            let idx = 0;
-            for (const cpu_ref of cpu_face_references) {
-                const additional_face = added_faces[idx];
-                faces.set(additional_face.chunk_face_key, cpu_ref);
-                idx++;
+            let face_origin_idx = 0;
+            for (const added_face of faces_to_add) {
+                const {face_definition, encoded_voxel_pos, mat_texture, mat_light, cull_side} = added_face;
+                face_definition.axis.appendQuadData(face_elements_buffer, face_origin_idx,
+                    encoded_voxel_pos, face_definition.axis_sign, cull_side,
+                    mat_texture, mat_light);
+                face_origin_idx += 12;
             }
         }
+
+        // Upload
+        if (!face_set_manager.addElementsExternRefHandle(gl, face_elements_buffer, (face_idx, face_ref) => {
+            faces.set(faces_to_add[face_idx].encoded_face_key, face_ref);
+        })) {
+            // TODO: Handle failure.
+        }
+    }
+
+    handleModifiedVoxelMaterials() {
+        // TODO
     }
 }

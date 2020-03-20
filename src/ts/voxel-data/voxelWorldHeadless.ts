@@ -1,6 +1,6 @@
 import {ProvidesVoxelChunkHeadless} from "./voxelChunkHeadless";
 import {vec3} from "gl-matrix";
-import {FACE_LIST, FaceDefinition} from "./faces";
+import {FACES_LIST, FaceDefinition} from "./faces";
 
 /**
  * @desc This type definition is compile time only and no data in the runtime is structured like it.
@@ -26,7 +26,7 @@ export class VoxelWorldHeadless<TGeneric extends TGeneric_VoxelHeadless<TGeneric
     private processNeighbors(pos: vec3, handle_neighbor: (face: FaceDefinition, neighbor_chunk: TGeneric["chunk"]) => void) {
         const { chunks } = this;
         const neighbor_lookup_vec = vec3.create();
-        for (const face of FACE_LIST) {
+        for (const face of FACES_LIST) {
             vec3.add(neighbor_lookup_vec, pos, face.vec_relative);
             const neighbor_chunk = chunks.get(VoxelWorldHeadless.encodeChunkPosition(neighbor_lookup_vec));
             if (neighbor_chunk == null) continue;
@@ -46,7 +46,7 @@ export class VoxelWorldHeadless<TGeneric extends TGeneric_VoxelHeadless<TGeneric
      * @param chunk_pos: The chunk's position (in chunk space ie $world_pos/CHUNK_BLOCK_COUNT$, not world space.)
      * @param blank_chunk: An instance of a chunk that isn't tracked by anything else.
      */
-    makeChunk(chunk_pos: vec3, blank_chunk: TGeneric["chunk"]): TGeneric["chunk"] {
+    putChunk(chunk_pos: vec3, blank_chunk: TGeneric["chunk"]): TGeneric["chunk"] {
         const { chunks } = this;
         const encoded_pos = VoxelWorldHeadless.encodeChunkPosition(chunk_pos);
         console.assert(!chunks.has(encoded_pos));
