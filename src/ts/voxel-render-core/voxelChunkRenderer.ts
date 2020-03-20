@@ -28,7 +28,7 @@ export class VoxelChunkRenderer {
         gl.drawArrays(gl.TRIANGLES, 0, this.face_set_manager.element_count * 6);  // There are 6 vertices per face. Draw uses vertex count. Therefore, we multiply by 6.
     }
 
-    handleModifiedVoxelPlacements(gl: GlCtx, chunk_data: VoxelChunkHeadless<any>, modified_locations: Iterable<vec3>) {  // TODO: Add support for slabs and proper materials
+    handleModifiedVoxelPlacements(gl: GlCtx, chunk_data: VoxelChunkHeadless<any>, modified_locations: Iterable<vec3>) {  // TODO: Add support for slabs and proper materials; optimize for worst case scenario.
         const { face_set_manager, faces } = this;
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
 
@@ -37,6 +37,8 @@ export class VoxelChunkRenderer {
         {
             function deleteFace(encoded_face_key: number) {
                 const face_ref = faces.get(encoded_face_key);
+                // This check exists to prevent a queued voxel from deleting a face that is reported to exist but hasn't
+                // been created yet because that face belongs to another queued voxel.
                 if (face_ref != null) {
                     face_set_manager.removeElement(gl, face_ref);
                     faces.delete(encoded_face_key);
@@ -53,24 +55,30 @@ export class VoxelChunkRenderer {
                     const neighbor_is_solid = neighbor_pointer != null && neighbor_pointer.hasVoxel();
                     const encoded_face_key = neighboring_face.axis.encodeFaceKey(root_pointer.encoded_pos, neighboring_face.axis_sign);
                     function addThisFace(texture: number, light: number, cull_side: boolean) {
-                        faces_to_add.push({
-                            face_definition: neighboring_face,
-                            encoded_voxel_pos: root_pointer.encoded_pos,
-                            encoded_face_key,
-                            mat_texture: texture,
-                            mat_light: light,
-                            cull_side
-                        });
+                        // This check exists to prevent a face from being created by the destruction of a voxel if the voxel
+                        // the face is intended to "repair" is also in the same operation and also plans on creating their own face
+                        // with the new-found void.
+                        if (!faces.has(encoded_face_key)) {
+                            faces_to_add.push({
+                                face_definition: neighboring_face,
+                                encoded_voxel_pos: root_pointer.encoded_pos,
+                                encoded_face_key,
+                                mat_texture: texture,
+                                mat_light: light,
+                                cull_side
+                            });
+                        }
                     }
 
-                    if (root_now_solid) {  // Modification is placing
+                    // TODO: This is still buggy in mixed operations. Fix it!
+                    if (root_now_solid) {  // This voxel has been PLACED
                         if (neighbor_is_solid) {  // We might need to remove a redundant face
                             deleteFace(encoded_face_key);
                         } else {  // We need to place a face there
                             addThisFace(0, 32, neighboring_face.axis_sign == 0);  // TODO: Use material
                         }
 
-                    } else {  // Modification is breaking
+                    } else {  // This voxel has been BROKEN
                         if (neighbor_is_solid) {  // We need to place a face here
                             addThisFace(0, 32, neighboring_face.axis_sign == 1); // TODO: Use material
                         } else {  // This is one of our faces and we need to delete it.
