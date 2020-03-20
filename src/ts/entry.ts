@@ -6,6 +6,7 @@ import VOXEL_FRAG_SOURCE from "./../res/voxel.frag";
 import {VoxelWorldHeadless} from "./voxel-data/voxelWorldHeadless";
 import {VoxelChunkHeadless} from "./voxel-data/voxelChunkHeadless";
 import {VoxelChunkRenderer} from "./voxel-render-core/voxelChunkRenderer";
+import {CHUNK_BLOCK_COUNT} from "./voxel-data/faces";
 
 const canvas = document.createElement("canvas");
 const gl = canvas.getContext("webgl")!;
@@ -64,13 +65,23 @@ function updateVoxels(voxels: [vec3, boolean][]) {
     chunk_renderer.handleModifiedVoxelPlacements(gl, data_chunk, voxels.map(voxel => voxel[0]));
 }
 (window as any).updateVoxels = updateVoxels;
-updateVoxels([
-    [[0, 0, 0], true],
-    [[1, 0, 0], true],
-    [[2, 0, 0], true],
-    [[3, 0, 0], true],
-    [[4, 0, 0], true]
-]);
+{
+    const voxel_write_pointer = data_chunk.getVoxelPointer([0, 0, 0]);
+    const modified_voxels = [];
+    for (let x = 0; x < CHUNK_BLOCK_COUNT; x++) {
+        for (let y = 0; y < CHUNK_BLOCK_COUNT; y++) {
+            for (let z = 0; z < CHUNK_BLOCK_COUNT; z++) {
+                if (Math.random() > 0.5) continue;
+                const pos: vec3 = [x, y, z];
+                modified_voxels.push(pos);
+                voxel_write_pointer.moveTo(pos);
+                voxel_write_pointer.setData(true);
+            }
+        }
+    }
+
+    chunk_renderer.handleModifiedVoxelPlacements(gl, data_chunk, modified_voxels);
+}
 
 // Setup vertex accessing
 const vslot_data = gl.getAttribLocation(render_program, "vertex_data");
@@ -94,6 +105,9 @@ const upos_view = gl.getUniformLocation(render_program, "view");
 const camera_pos: vec3 = [0.5, 0.5, 4];
 const camera_ang = [0, 0];
 const keys_down: Record<string, true> = {};
+
+let fps = 0;
+let last_sec = Date.now();
 
 function draw() {
     requestAnimationFrame(draw);
@@ -154,6 +168,15 @@ function draw() {
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     chunk_renderer.draw(gl);
+    {
+        fps++;
+        const current_time = Date.now();
+        if (last_sec + 1000 < current_time) {
+            console.log(fps);
+            last_sec = current_time;
+            fps = 0;
+        }
+    }
 }
 
 draw();
