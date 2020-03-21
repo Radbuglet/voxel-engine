@@ -1,7 +1,7 @@
 import {vec3} from "gl-matrix";
 import {IntBool, Vec3Axis} from "../helpers/typescript/aliases";
 
-// Chunk position encoding  TODO: Use number encoder
+// Chunk position encoding
 const POS_ENCODING_CHUNK_DIM = 18;  // Must be the same as the constant in the vertex shader.
 const ENCODING_DIM_SQUARED = POS_ENCODING_CHUNK_DIM * POS_ENCODING_CHUNK_DIM;
 export const UNIT_AXIS_ENCODED = [1, POS_ENCODING_CHUNK_DIM, ENCODING_DIM_SQUARED];
@@ -31,9 +31,9 @@ export class FaceAxis {
         this.face_opp_rel_encoded = UNIT_AXIS_ENCODED[vec_axis];
     }
 
-    appendQuadData(target: Uint16Array, target_offset: number, encoded_origin: number, face_side: IntBool, flip_culled_side: boolean, face_texture: number, face_light: number) {
+    appendQuadData(target: Uint16Array, target_offset: number, encoded_origin: number, sign: IntBool, face_flipped: IntBool, face_texture: number, face_light: number) {
         const { encoded_vertices, face_opp_rel_encoded } = this;
-        const common_vert_pos_encoded = encoded_origin + (face_side == 1 ? face_opp_rel_encoded : 0);
+        const common_vert_pos_encoded = encoded_origin + (sign == 1 ? face_opp_rel_encoded : 0);
         const common_material_encoded = face_light * 4 + face_texture * 255;
 
         function writeVertex(root_offset: number, face: EncodedAxisVertex) {
@@ -42,17 +42,20 @@ export class FaceAxis {
             target[write_idx + 1] = common_material_encoded + face.uv;
         }
         writeVertex(0, encoded_vertices[0]);
-        writeVertex(2, encoded_vertices[flip_culled_side ? 2 : 1]);
-        writeVertex(4, encoded_vertices[flip_culled_side ? 1 : 2]);
+        writeVertex(2, encoded_vertices[sign == face_flipped ? 2 : 1]);
+        writeVertex(4, encoded_vertices[sign == face_flipped ? 1 : 2]);
 
         writeVertex(6, encoded_vertices[3]);
-        writeVertex(8, encoded_vertices[flip_culled_side ? 5 : 4]);
-        writeVertex(10, encoded_vertices[flip_culled_side ? 4 : 5]);
+        writeVertex(8, encoded_vertices[sign == face_flipped ? 5 : 4]);
+        writeVertex(10, encoded_vertices[sign == face_flipped ? 4 : 5]);
     }
 
-    encodeFaceKey(encoded_origin: number, sign: IntBool) {
+    encodeFaceKey(encoded_origin: number, sign: IntBool, face_flipped: IntBool) {
         const { vec_axis, face_opp_rel_encoded } = this;
-        return encoded_origin + (sign == 1 ? face_opp_rel_encoded : 0) + vec_axis / 10;
+        const face_direction = sign == face_flipped ? 0 : 1;  // DEMO: face(0) == flipped(0) ? 0 (normal)  face(0) == flipped(1) : 1
+        let returnv: any = encoded_origin + (sign == 1 ? face_opp_rel_encoded : 0) + vec_axis / 10;  // TODO: Make this work without monkey patch.
+        returnv = returnv.toString() + "&&" + face_direction.toString();
+        return returnv;
     }
 }
 

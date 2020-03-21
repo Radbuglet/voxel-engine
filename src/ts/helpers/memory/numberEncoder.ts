@@ -9,7 +9,7 @@ import {inRange} from "../scalar";
  * @param part_configs: The different parts of the number in order of least significant to most significant.
  * The max_val is exclusive and values for that component can range from 0 to max_val - 1.
  */
-export function makeNumberEncoder<TParts extends RecordKeys>(part_configs: { id: TParts, max_val: number }[]) {
+export function makeNumberEncoder<TParts extends RecordKeys>(part_configs: { id: TParts, max_val: number }[]) {  // TODO: Use
     // Setup parts
     const parts = new Map<TParts, { multiplier: number, max_val: number }>();
     let multiplier = 1;
