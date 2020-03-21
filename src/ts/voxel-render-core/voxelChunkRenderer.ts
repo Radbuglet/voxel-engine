@@ -33,7 +33,7 @@ export class VoxelChunkRenderer {
         gl.drawArrays(gl.TRIANGLES, 0, this.face_set_manager.element_count * 6);  // There are 6 vertices per face. Draw uses vertex count. Therefore, we multiply by 6.
     }
 
-    handleModifiedVoxelPlacements<TDataGenerics extends TGeneric_VoxelHeadless<TDataGenerics>>(gl: GlCtx, chunk_data: VoxelChunkHeadless<any>, modified_locations: Iterable<vec3>, material_provider: ProvidesVoxelMaterialParsing<TDataGenerics>) {  // TODO: Add support for slabs and proper materials
+    handleModifiedVoxelPlacements<TDataGenerics extends TGeneric_VoxelHeadless<TDataGenerics>>(gl: GlCtx, chunk_data: VoxelChunkHeadless<any>, modified_locations: Iterable<vec3>, material_provider: ProvidesVoxelMaterialParsing<TDataGenerics>) {  // TODO: Add support for slabs
         const { face_set_manager, faces } = this;
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
 

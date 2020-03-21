@@ -51,9 +51,9 @@ const data_chunk = new VoxelChunkHeadless<any>();
 data_world.putChunk([0, 0, 0], data_world);
 const chunk_renderer = new VoxelChunkRenderer(gl, array_buffer);
 const renderer_mat_provider: ProvidesVoxelMaterialParsing<any> = {
-    parseMaterialOfVoxel(chunk_data, pointer, face) {
+    parseMaterialOfVoxel(chunk_data, pointer, _) {
         return {
-            light: Math.floor(vec3.dist(pointer.pos, [8, 8, 8]) * 3) + 1,
+            light: Math.ceil(vec3.dist(pointer.pos, [8, 8, 8]) * 3) + 1,
             texture: 0
         }
     }

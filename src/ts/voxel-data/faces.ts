@@ -1,14 +1,15 @@
 import {vec3} from "gl-matrix";
 import {IntBool, Vec3Axis} from "../helpers/typescript/aliases";
+import {makeNumberEncoder} from "../helpers/memory/numberEncoder";
 
 // Chunk position encoding
 const POS_ENCODING_CHUNK_DIM = 18;  // Must be the same as the constant in the vertex shader.
-const ENCODING_DIM_SQUARED = POS_ENCODING_CHUNK_DIM * POS_ENCODING_CHUNK_DIM;
-export const UNIT_AXIS_ENCODED = [1, POS_ENCODING_CHUNK_DIM, ENCODING_DIM_SQUARED];
+export const UNIT_AXIS_ENCODED = [1, POS_ENCODING_CHUNK_DIM, POS_ENCODING_CHUNK_DIM ** 2];
 export const CHUNK_BLOCK_COUNT = POS_ENCODING_CHUNK_DIM - 2;
-export function encodeChunkPos(pos: vec3) {
-    return pos[0] + pos[1] * POS_ENCODING_CHUNK_DIM + pos[2] * ENCODING_DIM_SQUARED;
-}
+export const encodeChunkPos = makeNumberEncoder([
+    POS_ENCODING_CHUNK_DIM, POS_ENCODING_CHUNK_DIM, POS_ENCODING_CHUNK_DIM,  // Positional data
+    4, 2  // Face encoding data
+]);
 
 // Face axis
 type EncodedAxisVertex = {
@@ -53,7 +54,7 @@ export class FaceAxis {
     encodeFaceKey(encoded_origin: number, sign: IntBool, face_flipped: IntBool) {
         const { vec_axis, face_opp_rel_encoded } = this;
         const face_direction = sign == face_flipped ? 0 : 1;  // DEMO: face(0) == flipped(0) ? 0 (normal)  face(0) == flipped(1) : 1
-        return encoded_origin + (sign == 1 ? face_opp_rel_encoded : 0) + vec_axis / 10 + face_direction / 100;
+        return encoded_origin + (sign == 1 ? face_opp_rel_encoded : 0) + encodeChunkPos([vec_axis, face_direction], 3);
     }
 }
 
