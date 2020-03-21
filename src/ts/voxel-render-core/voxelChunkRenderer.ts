@@ -1,7 +1,7 @@
 import {GlSetBuffer, SetBufferElem} from "../helpers/memory/glSetBuffer";
 import {GlCtx, IntBool} from "../helpers/typescript/aliases";
 import {vec3} from "gl-matrix";
-import {FaceDefinition, FACES_LIST} from "../voxel-data/faces";
+import {FaceDefinition, FACES, FACES_LIST} from "../voxel-data/faces";
 import {ChunkVoxelPointer, VoxelChunkHeadless} from "../voxel-data/voxelChunkHeadless";
 import {TGeneric_VoxelHeadless} from "../voxel-data/voxelWorldHeadless";
 
@@ -90,7 +90,7 @@ export class VoxelChunkRenderer {
 
                     } else {  // This voxel has been BROKEN
                         if (neighbor_is_solid) {  // We might need to repair the block which we "simplified" when the root was extant if that voxel is from a previous batch.
-                            const material = material_provider.parseMaterialOfVoxel(chunk_data, neighbor_pointer!, neighboring_face);  // Neighbor pointer must be non null as the neighbor is solid.
+                            const material = material_provider.parseMaterialOfVoxel(chunk_data, neighbor_pointer!, FACES[neighboring_face.inverse_key]);  // Neighbor pointer must be non null as the neighbor is solid.
 
                             // If its in the first batch we may not want to repair it if the new voxel already created that face, hence why we ensure this action is conditional.
                             addFace(material.texture, material.light, 1); // Flipped mode is pointing towards the root. Our intended behavior is that this face is pointing outwards of the neighbor thus towards the root.

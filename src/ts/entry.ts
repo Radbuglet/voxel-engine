@@ -7,6 +7,7 @@ import {VoxelWorldHeadless} from "./voxel-data/voxelWorldHeadless";
 import {VoxelChunkHeadless} from "./voxel-data/voxelChunkHeadless";
 import {ProvidesVoxelMaterialParsing, VoxelChunkRenderer} from "./voxel-render-core/voxelChunkRenderer";
 import {CHUNK_BLOCK_COUNT} from "./voxel-data/faces";
+import TEXTURES_IMAGE_PATH from "../res/textures.png";
 
 const canvas = document.createElement("canvas");
 const gl = canvas.getContext("webgl")!;
@@ -51,10 +52,10 @@ const data_chunk = new VoxelChunkHeadless<any>();
 data_world.putChunk([0, 0, 0], data_world);
 const chunk_renderer = new VoxelChunkRenderer(gl, array_buffer);
 const renderer_mat_provider: ProvidesVoxelMaterialParsing<any> = {
-    parseMaterialOfVoxel(chunk_data, pointer, _) {
+    parseMaterialOfVoxel(chunk_data, pointer, face) {
         return {
-            light: Math.ceil(vec3.dist(pointer.pos, [8, 8, 8]) * 3) + 1,
-            texture: pointer.pos[1] % 4
+            light: pointer.pos[1] * 2 + 4,
+            texture: face.towards_key == "py" ? 2 : pointer.pos[1] % 4
         }
     }
 };
@@ -87,7 +88,7 @@ const my_texture = gl.createTexture()!;
     const srcFormat = gl.RGBA;
     const srcType = gl.UNSIGNED_BYTE;
     const pixel = new Uint8Array([
-        0, 0, 0, 255,
+        255, 255, 255, 255,
         255, 0, 0, 255,
         0, 255, 0, 255,
         0, 0, 255, 255]);
@@ -99,6 +100,12 @@ const my_texture = gl.createTexture()!;
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+    const image = new Image();
+    image.src = TEXTURES_IMAGE_PATH;
+    image.onload = () => {
+        gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, srcFormat, srcType, image);
+    }
 }
 
 // Setup vertex accessing
