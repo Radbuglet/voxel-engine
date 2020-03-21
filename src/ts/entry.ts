@@ -5,7 +5,7 @@ import VOXEL_VERTEX_SOURCE from "./../res/voxel.vert";
 import VOXEL_FRAG_SOURCE from "./../res/voxel.frag";
 import {VoxelWorldHeadless} from "./voxel-data/voxelWorldHeadless";
 import {VoxelChunkHeadless} from "./voxel-data/voxelChunkHeadless";
-import {VoxelChunkRenderer} from "./voxel-render-core/voxelChunkRenderer";
+import {ProvidesVoxelMaterialParsing, VoxelChunkRenderer} from "./voxel-render-core/voxelChunkRenderer";
 import {CHUNK_BLOCK_COUNT} from "./voxel-data/faces";
 
 const canvas = document.createElement("canvas");
@@ -50,6 +50,14 @@ const data_world = new VoxelWorldHeadless<any>();
 const data_chunk = new VoxelChunkHeadless<any>();
 data_world.putChunk([0, 0, 0], data_world);
 const chunk_renderer = new VoxelChunkRenderer(gl, array_buffer);
+const renderer_mat_provider: ProvidesVoxelMaterialParsing<any> = {
+    parseMaterialOfVoxel(chunk_data, pointer, face) {
+        return {
+            light: Math.floor(vec3.dist(pointer.pos, [8, 8, 8]) * 3) + 1,
+            texture: 0
+        }
+    }
+};
 
 function updateVoxels(voxels: [vec3, boolean][]) {
     const voxel_write_pointer = data_chunk.getVoxelPointer([0, 0, 0]);
@@ -62,7 +70,7 @@ function updateVoxels(voxels: [vec3, boolean][]) {
         }
     }
 
-    chunk_renderer.handleModifiedVoxelPlacements(gl, data_chunk, voxels.map(voxel => voxel[0]));
+    chunk_renderer.handleModifiedVoxelPlacements(gl, data_chunk, voxels.map(voxel => voxel[0]), renderer_mat_provider);
 }
 (window as any).updateVoxels = updateVoxels;
 (window as any).cr = chunk_renderer;
@@ -93,7 +101,37 @@ const keys_down: Record<string, true> = {};
 function draw() {
     requestAnimationFrame(draw);
 
-    // Update
+    // Update map
+    if (keys_down["f"]) {
+        console.time("produce");
+        const voxel_write_pointer = data_chunk.getVoxelPointer([0, 0, 0]);
+        const modified_voxels = [];
+        for (let x = 0; x < CHUNK_BLOCK_COUNT; x++) {
+            for (let y = 0; y < CHUNK_BLOCK_COUNT; y++) {
+                for (let z = 0; z < CHUNK_BLOCK_COUNT; z++) {
+                    const desired_state = Math.random() > 0.7;
+                    const pos: vec3 = [x, y, z];
+                    voxel_write_pointer.moveTo(pos);
+                    if (!voxel_write_pointer.hasVoxel() && desired_state) {
+                        modified_voxels.push(pos);
+                        voxel_write_pointer.setData(true);
+                    }
+
+                    if (voxel_write_pointer.hasVoxel() && !desired_state) {
+                        modified_voxels.push(pos);
+                        voxel_write_pointer.removeVoxel();
+                    }
+                }
+            }
+        }
+        console.timeEnd("produce");
+
+        console.time("update");
+        chunk_renderer.handleModifiedVoxelPlacements(gl, data_chunk, modified_voxels, renderer_mat_provider);
+        console.timeEnd("update");
+    }
+
+    // Update movement
     if (keys_down["ArrowLeft"]) {
         camera_ang[0] += Math.PI * 0.02;
     }
@@ -158,53 +196,6 @@ document.body.append(canvas);
 
 document.body.onkeydown = e => {
     keys_down[e.key] = true;
-
-    if (e.key == "f") {
-        console.time("produce");
-        const voxel_write_pointer = data_chunk.getVoxelPointer([0, 0, 0]);
-        const modified_voxels = [];
-        for (let x = 0; x < CHUNK_BLOCK_COUNT; x++) {
-            for (let y = 0; y < CHUNK_BLOCK_COUNT; y++) {
-                for (let z = 0; z < CHUNK_BLOCK_COUNT; z++) {
-                    const desired_state = Math.random() > 0.5;
-                    const pos: vec3 = [x, y, z];
-                    voxel_write_pointer.moveTo(pos);
-                    if (!voxel_write_pointer.hasVoxel() && desired_state) {
-                        modified_voxels.push(pos);
-                        voxel_write_pointer.setData(true);
-                    }
-
-                    if (voxel_write_pointer.hasVoxel() && !desired_state) {
-                        modified_voxels.push(pos);
-                        voxel_write_pointer.removeVoxel();
-                    }
-                }
-            }
-        }
-        console.timeEnd("produce");
-
-        console.time("update");
-        chunk_renderer.handleModifiedVoxelPlacements(gl, data_chunk, modified_voxels);
-        console.timeEnd("update");
-    }
-
-    if (e.key == "g") {
-        const voxel_write_pointer = data_chunk.getVoxelPointer([0, 0, 0]);
-        const modified_voxels = [];
-        for (let x = 0; x < CHUNK_BLOCK_COUNT; x++) {
-            for (let y = 0; y < CHUNK_BLOCK_COUNT; y++) {
-                for (let z = 0; z < CHUNK_BLOCK_COUNT; z++) {
-                    const pos: vec3 = [x, y, z];
-                    voxel_write_pointer.moveTo(pos);
-                    if (voxel_write_pointer.hasVoxel()) {
-                        modified_voxels.push(pos);
-                        voxel_write_pointer.removeVoxel();
-                    }
-                }
-            }
-        }
-        chunk_renderer.handleModifiedVoxelPlacements(gl, data_chunk, modified_voxels);
-    }
 };
 
 document.body.onkeyup = e => {

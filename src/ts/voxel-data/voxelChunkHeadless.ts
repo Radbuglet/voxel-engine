@@ -25,6 +25,7 @@ export class VoxelChunkHeadless<TGeneric extends TGeneric_VoxelHeadless<TGeneric
     /**
      * @desc Constructs a new voxel pointer for a voxel in this chunk.
      * @param rel_pos: Position of voxel in chunk relative space.
+     * NOTE: Using a rel_pos outside out side of this chunk will result in undefined behavior.
      */
     getVoxelPointer(rel_pos: vec3): ChunkVoxelPointer<TGeneric["voxel"]> {
         return new ChunkVoxelPointer<TGeneric>(this, rel_pos, encodeChunkPos(rel_pos));

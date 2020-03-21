@@ -1,8 +1,9 @@
 import {GlSetBuffer, SetBufferElem} from "../helpers/memory/glSetBuffer";
-import {GlCtx, IntBool, Vec3Axis} from "../helpers/typescript/aliases";
+import {GlCtx, IntBool} from "../helpers/typescript/aliases";
 import {vec3} from "gl-matrix";
-import {encodeChunkPos, FACES_LIST, FaceDefinition, FaceKey} from "../voxel-data/faces";
+import {FaceDefinition, FACES_LIST} from "../voxel-data/faces";
 import {ChunkVoxelPointer, VoxelChunkHeadless} from "../voxel-data/voxelChunkHeadless";
+import {TGeneric_VoxelHeadless} from "../voxel-data/voxelWorldHeadless";
 
 type FaceToAdd = {
     encoded_voxel_pos: number,
@@ -12,6 +13,10 @@ type FaceToAdd = {
     mat_texture: number,
     mat_light: number
 };
+export interface ProvidesVoxelMaterialParsing<TGeneric extends TGeneric_VoxelHeadless<TGeneric>> {
+    parseMaterialOfVoxel(chunk_data: VoxelChunkHeadless<TGeneric>, pointer: ChunkVoxelPointer<TGeneric>, face: FaceDefinition): { texture: number, light: number};
+}
+
 export class VoxelChunkRenderer {
     private readonly face_set_manager: GlSetBuffer;
     private readonly faces = new Map<number, SetBufferElem | null>();  // Key is an encoded face obtained from the face template.
@@ -28,7 +33,7 @@ export class VoxelChunkRenderer {
         gl.drawArrays(gl.TRIANGLES, 0, this.face_set_manager.element_count * 6);  // There are 6 vertices per face. Draw uses vertex count. Therefore, we multiply by 6.
     }
 
-    handleModifiedVoxelPlacements(gl: GlCtx, chunk_data: VoxelChunkHeadless<any>, modified_locations: Iterable<vec3>) {  // TODO: Add support for slabs and proper materials; optimize for worst case scenario.
+    handleModifiedVoxelPlacements<TDataGenerics extends TGeneric_VoxelHeadless<TDataGenerics>>(gl: GlCtx, chunk_data: VoxelChunkHeadless<any>, modified_locations: Iterable<vec3>, material_provider: ProvidesVoxelMaterialParsing<TDataGenerics>) {  // TODO: Add support for slabs and proper materials
         const { face_set_manager, faces } = this;
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
 
@@ -75,17 +80,20 @@ export class VoxelChunkRenderer {
                         }
                     }
 
-                    if (root_now_solid) {  // This voxel has been PLACED  TODO: Fix culling sides.
+                    if (root_now_solid) {  // This voxel has been PLACED
                         if (neighbor_is_solid) {  // There might be a redundant face here if the neighbor was constructed in an earlier batch.
                             tryToDeleteFace(1);  // This is a face pointing towards the root, not outwards and we should flip accordingly.
                         } else {  // A face needs to be here.
-                            addFace(0, 32, 0);  // Normal mode is pointing away from the root, which is desired here.  TODO: Use material
+                            const material = material_provider.parseMaterialOfVoxel(chunk_data, root_pointer, neighboring_face);
+                            addFace(material.texture, material.light, 0);  // Normal mode is pointing away from the root, which is desired here.
                         }
 
                     } else {  // This voxel has been BROKEN
                         if (neighbor_is_solid) {  // We might need to repair the block which we "simplified" when the root was extant if that voxel is from a previous batch.
+                            const material = material_provider.parseMaterialOfVoxel(chunk_data, neighbor_pointer!, neighboring_face);  // Neighbor pointer must be non null as the neighbor is solid.
+
                             // If its in the first batch we may not want to repair it if the new voxel already created that face, hence why we ensure this action is conditional.
-                            addFace(0, 32, 1); // Flipped mode is pointing towards the root. Our intended behavior is that this face is pointing outwards of the neighbor thus towards the root. TODO: Use material
+                            addFace(material.texture, material.light, 1); // Flipped mode is pointing towards the root. Our intended behavior is that this face is pointing outwards of the neighbor thus towards the root.
                         }
 
                         // We need to delete all faces that belonged to us, no matter what.

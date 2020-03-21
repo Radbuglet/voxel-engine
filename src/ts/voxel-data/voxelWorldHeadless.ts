@@ -1,6 +1,6 @@
 import {ProvidesVoxelChunkHeadless} from "./voxelChunkHeadless";
 import {vec3} from "gl-matrix";
-import {FACES_LIST, FaceDefinition} from "./faces";
+import {FaceDefinition, FACES_LIST} from "./faces";
 
 /**
  * @desc This type definition is compile time only and no data in the runtime is structured like it.

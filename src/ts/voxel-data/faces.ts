@@ -53,9 +53,7 @@ export class FaceAxis {
     encodeFaceKey(encoded_origin: number, sign: IntBool, face_flipped: IntBool) {
         const { vec_axis, face_opp_rel_encoded } = this;
         const face_direction = sign == face_flipped ? 0 : 1;  // DEMO: face(0) == flipped(0) ? 0 (normal)  face(0) == flipped(1) : 1
-        let returnv: any = encoded_origin + (sign == 1 ? face_opp_rel_encoded : 0) + vec_axis / 10;  // TODO: Make this work without monkey patch.
-        returnv = returnv.toString() + "&&" + face_direction.toString();
-        return returnv;
+        return encoded_origin + (sign == 1 ? face_opp_rel_encoded : 0) + vec_axis / 10 + face_direction / 100;
     }
 }
 
