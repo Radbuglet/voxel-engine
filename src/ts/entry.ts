@@ -54,7 +54,7 @@ const chunk_renderer = new VoxelChunkRenderer(gl, array_buffer);
 const renderer_mat_provider: ProvidesVoxelMaterialParsing<any> = {
     parseMaterialOfVoxel(chunk_data, pointer, face) {
         return {
-            light: pointer.pos[1] * 2 + 4,
+            light: [25, 5, 16, 16, 50, 25][face.index],
             texture: face.towards_key == "py" ? 2 : pointer.pos[1] % 4
         }
     }
@@ -117,7 +117,7 @@ gl.vertexAttribPointer(vslot_data, 2, gl.UNSIGNED_SHORT, false, 0, 0);  // Speci
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 gl.viewport(0, 0, canvas.width, canvas.height);
-gl.clearColor(0.2, 0.2, 0.2, 1);
+gl.clearColor(0.9, 0.9, 0.92, 1);
 gl.enable(gl.CULL_FACE);
 gl.enable(gl.DEPTH_TEST);
 gl.useProgram(render_program);

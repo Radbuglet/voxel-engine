@@ -10,6 +10,11 @@ export const encodeChunkPos = makeNumberEncoder([
     POS_ENCODING_CHUNK_DIM, POS_ENCODING_CHUNK_DIM, POS_ENCODING_CHUNK_DIM,  // Positional data
     4, 2  // Face encoding data
 ]);
+const encodeMaterialData = makeNumberEncoder([
+    2, 2,   // UV
+    64,     // Light
+    256     // Texture
+]);
 
 // Face axis
 type EncodedAxisVertex = {
@@ -26,16 +31,16 @@ export class FaceAxis {
             const { pos, uv } = face;
             return {
                 pos: encodeChunkPos(pos),
-                uv: uv[0] + 2 * uv[1]
+                uv: encodeMaterialData(uv)
             }
         });
         this.face_opp_rel_encoded = UNIT_AXIS_ENCODED[vec_axis];
     }
 
-    appendQuadData(target: Uint16Array, target_offset: number, encoded_origin: number, sign: IntBool, face_flipped: IntBool, face_texture: number, face_light: number) {  // TODO: Use numberEncoder here as well.
+    appendQuadData(target: Uint16Array, target_offset: number, encoded_origin: number, sign: IntBool, face_flipped: IntBool, face_texture: number, face_light: number) {
         const { encoded_vertices, face_opp_rel_encoded } = this;
         const common_vert_pos_encoded = encoded_origin + (sign == 1 ? face_opp_rel_encoded : 0);
-        const common_material_encoded = face_light * 4 + face_texture * 255;
+        const common_material_encoded = encodeMaterialData([face_light, face_texture], 2);
 
         function writeVertex(root_offset: number, face: EncodedAxisVertex) {
             const write_idx = target_offset + root_offset;
@@ -97,6 +102,7 @@ export const FACE_AXIS = {
 // Cube faces
 export type FaceKey = "px" |"py" | "pz" | "nx" |"ny" | "nz";
 export type FaceDefinition = {
+    index: number,
     vec_relative: vec3,
     encoded_relative: number,
     axis: FaceAxis,
@@ -107,31 +113,37 @@ export type FaceDefinition = {
 
 export const FACES: Record<"nx" | "ny" | "nz" | "px" | "py" | "pz", FaceDefinition> = {
     nx: {
+        index: 0,
         vec_relative: [-1, 0, 0], encoded_relative: -UNIT_AXIS_ENCODED[0],
         axis: FACE_AXIS.X, axis_sign: 0,
         towards_key: "nx", inverse_key: "px"
     },
-    px: {
-        vec_relative: [1, 0, 0], encoded_relative:  UNIT_AXIS_ENCODED[0],
-        axis: FACE_AXIS.X, axis_sign: 1,
-        towards_key: "px", inverse_key: "nx"
-    },
     ny: {
+        index: 1,
         vec_relative: [0, -1, 0], encoded_relative: -UNIT_AXIS_ENCODED[1],
         axis: FACE_AXIS.Y, axis_sign: 0,
         towards_key: "ny", inverse_key: "py"
     },
-    py: {
-        vec_relative: [0, 1, 0], encoded_relative:  UNIT_AXIS_ENCODED[1],
-        axis: FACE_AXIS.Y, axis_sign: 1,
-        towards_key: "py", inverse_key: "ny"
-    },
     nz: {
+        index: 2,
         vec_relative: [0, 0, -1], encoded_relative: -UNIT_AXIS_ENCODED[2],
         axis: FACE_AXIS.Z, axis_sign: 0,
         towards_key: "nz", inverse_key: "pz"
     },
+    px: {
+        index: 3,
+        vec_relative: [1, 0, 0], encoded_relative:  UNIT_AXIS_ENCODED[0],
+        axis: FACE_AXIS.X, axis_sign: 1,
+        towards_key: "px", inverse_key: "nx"
+    },
+    py: {
+        index: 4,
+        vec_relative: [0, 1, 0], encoded_relative:  UNIT_AXIS_ENCODED[1],
+        axis: FACE_AXIS.Y, axis_sign: 1,
+        towards_key: "py", inverse_key: "ny"
+    },
     pz: {
+        index: 5,
         vec_relative: [0, 0, 1], encoded_relative:  UNIT_AXIS_ENCODED[2],
         axis: FACE_AXIS.Z, axis_sign: 1,
         towards_key: "pz", inverse_key: "nz"

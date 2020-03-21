@@ -36,8 +36,8 @@ void main() {
     ));
 
     // Texture processing
-    float texture_idx = floor(mat_data / 255.0);  // 8<texture_id>
-    float second_part = mod(mat_data, 255.0);  // 6<light> 2<uv>
+    float texture_idx = floor(mat_data / 256.0);  // 8<texture_id>
+    float second_part = mod(mat_data, 256.0);  // 6<light> 2<uv>
     light = floor(second_part / 4.0);
     float uv_encoded = mod(second_part, 4.0);
     uv = vec2(  // Determine UV in "frame grid space"

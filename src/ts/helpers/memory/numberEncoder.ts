@@ -19,7 +19,7 @@ export function makeNumberEncoder(parts_config: number[]) {
     }
 
     // Make function
-    return (values: number[], values_offset: number = 0): number => {
+    return (values: { [key: number]: number } & { length: number }, values_offset: number = 0): number => {
         let final_val = 0;
         console.assert(values_offset + values.length <= parts_config.length);
         for (let idx = 0; idx < values.length; idx++) {
