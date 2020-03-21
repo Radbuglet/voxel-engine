@@ -54,7 +54,7 @@ const renderer_mat_provider: ProvidesVoxelMaterialParsing<any> = {
     parseMaterialOfVoxel(chunk_data, pointer, _) {
         return {
             light: Math.ceil(vec3.dist(pointer.pos, [8, 8, 8]) * 3) + 1,
-            texture: 0
+            texture: pointer.pos[1] % 4
         }
     }
 };
@@ -75,6 +75,32 @@ function updateVoxels(voxels: [vec3, boolean][]) {
 (window as any).updateVoxels = updateVoxels;
 (window as any).cr = chunk_renderer;
 
+// Setup textures
+const my_texture = gl.createTexture()!;
+{
+    gl.bindTexture(gl.TEXTURE_2D, my_texture);
+    const level = 0;
+    const internalFormat = gl.RGBA;
+    const width = 2;
+    const height = 2;
+    const border = 0;
+    const srcFormat = gl.RGBA;
+    const srcType = gl.UNSIGNED_BYTE;
+    const pixel = new Uint8Array([
+        0, 0, 0, 255,
+        255, 0, 0, 255,
+        0, 255, 0, 255,
+        0, 0, 255, 255]);
+    gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+        width, height, border, srcFormat, srcType,
+        pixel);
+
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+}
+
 // Setup vertex accessing
 const vslot_data = gl.getAttribLocation(render_program, "vertex_data");
 gl.enableVertexAttribArray(vslot_data);  // Tells the vertex shader to use the VAP instead of a constant.
@@ -88,6 +114,7 @@ gl.clearColor(0.2, 0.2, 0.2, 1);
 gl.enable(gl.CULL_FACE);
 gl.enable(gl.DEPTH_TEST);
 gl.useProgram(render_program);
+gl.uniform1i(gl.getUniformLocation(render_program, "texture_sampler"), 0);
 
 const proj_mat = new Float32Array(16);
 mat4.perspective(proj_mat, Math.PI * 0.7, canvas.width / canvas.height, 0.01, 1000);

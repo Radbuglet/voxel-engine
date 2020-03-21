@@ -32,7 +32,7 @@ export class FaceAxis {
         this.face_opp_rel_encoded = UNIT_AXIS_ENCODED[vec_axis];
     }
 
-    appendQuadData(target: Uint16Array, target_offset: number, encoded_origin: number, sign: IntBool, face_flipped: IntBool, face_texture: number, face_light: number) {
+    appendQuadData(target: Uint16Array, target_offset: number, encoded_origin: number, sign: IntBool, face_flipped: IntBool, face_texture: number, face_light: number) {  // TODO: Use numberEncoder here as well.
         const { encoded_vertices, face_opp_rel_encoded } = this;
         const common_vert_pos_encoded = encoded_origin + (sign == 1 ? face_opp_rel_encoded : 0);
         const common_material_encoded = face_light * 4 + face_texture * 255;

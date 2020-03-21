@@ -4,8 +4,8 @@ precision mediump float;
 const float POS_ENCODING_CHUNK_DIM = 18.0;  // The chunk size is always 2 more than the amount of blocks in the chunk.
 const float VOXEL_WORLD_SIZE = 1.0;
 
-const float TEXTURE_FRAMES_CX = 1.0;
-const float TEXTURE_FRAMES_CY = 1.0;
+const float TEXTURE_FRAMES_CX = 2.0;
+const float TEXTURE_FRAMES_CY = 2.0;
 
 #pragma glsift: export(CHUNK_SIZE)
 #pragma glsift: export(VOXEL_WORLD_SIZE)
@@ -41,8 +41,8 @@ void main() {
     light = floor(second_part / 4.0);
     float uv_encoded = mod(second_part, 4.0);
     uv = vec2(  // Determine UV in "frame grid space"
-        mod(texture_idx, TEXTURE_FRAMES_CX)    + uv_encoded > 1.0 ? 1.0 : 0.0,
-        floor(texture_idx / TEXTURE_FRAMES_CY) + mod(uv_encoded, 2.0) == 1.0 ? 1.0 : 0.0)
+        mod(texture_idx, TEXTURE_FRAMES_CX)    + (uv_encoded > 1.0 ? 1.0 : 0.0),  // Equivalent to: >= 2.0 (when the 2nd bit is high)
+        floor(texture_idx / TEXTURE_FRAMES_CX) + (mod(uv_encoded, 2.0) == 1.0 ? 1.0 : 0.0))
     / vec2(TEXTURE_FRAMES_CX, TEXTURE_FRAMES_CY);  // Convert to absolute texture UV
 
     // Gl stuff
