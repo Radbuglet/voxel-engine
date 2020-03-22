@@ -145,6 +145,20 @@ export class GlSetBuffer {
     }
 
     /**
+     * @desc Modifies the data of an element.
+     * PRECONDITION: This method expects that the target buffer is bound to the ARRAY_BUFFER register.
+     * @param gl: The WebGL context used by the target buffer.
+     * @param element: The element to be modified.
+     * @param data_view: The new contents of the element. May not be a subarray and must be the size of one element in bytes.
+     */
+    setElement(gl: GlCtx, element: SetBufferElemInternal, data_view: TypedArray) {
+        console.assert(element.owner_set == this);
+        console.assert(data_view.byteLength == this.elem_byte_size);
+        gl.bufferSubData(gl.ARRAY_BUFFER, element.gpu_root_idx, data_view);
+        element.subarray_buffer = data_view;
+    }
+
+    /**
      * @desc forces the buffer to be resized to the ideal capacity, as determined by the get_ideal_capacity() hook.
      * This method will never resize the buffer below the length of the data stored.
      * PRECONDITION: This method expects that the target buffer is bound to the ARRAY_BUFFER register.
