@@ -2,7 +2,7 @@ import {GlSetBuffer, SetBufferElem} from "../helpers/memory/glSetBuffer";
 import {GlCtx, IntBool} from "../helpers/typescript/aliases";
 import {vec3} from "gl-matrix";
 import {FaceDefinition, FACES, FACES_LIST} from "../voxel-data/faces";
-import {ChunkVoxelPointer, ProvidesVoxelChunkHeadless, VoxelChunkData} from "../voxel-data/voxelChunkData";
+import {VoxelChunkPointer, ProvidesVoxelChunkHeadless} from "../voxel-data/voxelChunkData";
 
 type FaceToAdd = {
     encoded_voxel_pos: number,
@@ -13,7 +13,7 @@ type FaceToAdd = {
     mat_light: number
 };
 export interface ProvidesVoxelMaterialParsing<TChunkWrapper extends ProvidesVoxelChunkHeadless<TChunkWrapper, TVoxel>, TVoxel> {
-    parseMaterialOfVoxel(pointer: ChunkVoxelPointer<TChunkWrapper, TVoxel>, face: FaceDefinition): { texture: number, light: number};  // TODO: first argument shouldn't point to root chunk but rather the chunk containing the pointer.
+    parseMaterialOfVoxel(pointer: VoxelChunkPointer<TChunkWrapper, TVoxel>, face: FaceDefinition): { texture: number, light: number};  // TODO: first argument shouldn't point to root chunk but rather the chunk containing the pointer.
 }
 
 export class VoxelChunkRenderer {

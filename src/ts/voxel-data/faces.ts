@@ -3,9 +3,9 @@ import {IntBool, Vec3Axis} from "../helpers/typescript/aliases";
 import {makeNumberEncoder} from "../helpers/memory/numberEncoder";
 
 // Chunk position encoding
-const POS_ENCODING_CHUNK_DIM = 18;  // Must be the same as the constant in the vertex shader.
+const POS_ENCODING_CHUNK_DIM = 17;  // Must be the same as the constant in the vertex shader.
 export const UNIT_AXIS_ENCODED = [1, POS_ENCODING_CHUNK_DIM, POS_ENCODING_CHUNK_DIM ** 2];
-export const CHUNK_BLOCK_COUNT = POS_ENCODING_CHUNK_DIM - 2;
+export const CHUNK_BLOCK_COUNT = POS_ENCODING_CHUNK_DIM - 1;
 export const encodeChunkPos = makeNumberEncoder([
     POS_ENCODING_CHUNK_DIM, POS_ENCODING_CHUNK_DIM, POS_ENCODING_CHUNK_DIM,  // Positional data
     4, 2  // Face encoding data

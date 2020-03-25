@@ -25,11 +25,11 @@ export class VoxelChunkData<TChunkWrapper extends ProvidesVoxelChunkHeadless<TCh
 
     /**
      * @desc Constructs a new voxel pointer for a voxel in this chunk.
-     * @param rel_pos: Position of voxel in chunk relative space.
-     * NOTE: Using a rel_pos outside out side of this chunk will result in undefined behavior.
+     * @param rel_pos: Position of voxel in chunk relative space ie vec3<[0, chunk_size), [0, chunk_size), [0, chunk_size)>.
+     * NOTE: Using a rel_pos outside outside of this chunk will result in undefined behavior.
      */
-    getVoxelPointer(rel_pos: vec3): ChunkVoxelPointer<TChunkWrapper, TVoxel> {
-        return new ChunkVoxelPointer<TChunkWrapper, TVoxel>(this.wrapper, rel_pos, encodeChunkPos(rel_pos));
+    getVoxelPointer(rel_pos: vec3): VoxelChunkPointer<TChunkWrapper, TVoxel> {
+        return new VoxelChunkPointer<TChunkWrapper, TVoxel>(this.wrapper, rel_pos, encodeChunkPos(rel_pos));
     }
 }
 
@@ -37,7 +37,7 @@ export class VoxelChunkData<TChunkWrapper extends ProvidesVoxelChunkHeadless<TCh
  * @desc Points towards a voxel in a chunk. All actions performed by this vector only happen on the voxel data object and
  * nothing else gets updated automatically.
  */
-export class ChunkVoxelPointer<TChunkWrapper extends ProvidesVoxelChunkHeadless<TChunkWrapper, TVoxel>, TVoxel> {
+export class VoxelChunkPointer<TChunkWrapper extends ProvidesVoxelChunkHeadless<TChunkWrapper, TVoxel>, TVoxel> {
     constructor(public readonly chunk_wrapped: TChunkWrapper, public pos: vec3, public encoded_pos: number) {
         this.encoded_pos = encodeChunkPos(pos);
     }
@@ -47,15 +47,15 @@ export class ChunkVoxelPointer<TChunkWrapper extends ProvidesVoxelChunkHeadless<
      * chunk which doesn't exist. This voxel may or may not exist in the chunk data.
      * @param face: The neighboring face you wish to query.
      */
-    getNeighbor(face: FaceDefinition): ChunkVoxelPointer<TChunkWrapper, TVoxel> | null {
+    getNeighbor(face: FaceDefinition): VoxelChunkPointer<TChunkWrapper, TVoxel> | null {
         const new_pos = vec3.create();
         vec3.add(new_pos, this.pos, face.vec_relative);
         if (new_pos[face.axis.vec_axis] < 0 || new_pos[face.axis.vec_axis] >= CHUNK_BLOCK_COUNT) {  // No longer in the chunk bounds.
             const new_chunk = this.chunk_wrapped.voxel_chunk_data.neighbors.get(face.towards_key);
             if (new_chunk == null) return null;
-            return new ChunkVoxelPointer<TChunkWrapper, TVoxel>(new_chunk, new_pos, encodeChunkPos(new_pos));
+            return new VoxelChunkPointer<TChunkWrapper, TVoxel>(new_chunk, new_pos, encodeChunkPos(new_pos));
         } else {
-            return new ChunkVoxelPointer<TChunkWrapper, TVoxel>(this.chunk_wrapped, new_pos, this.encoded_pos + face.encoded_relative);
+            return new VoxelChunkPointer<TChunkWrapper, TVoxel>(this.chunk_wrapped, new_pos, this.encoded_pos + face.encoded_relative);
         }
     }
 

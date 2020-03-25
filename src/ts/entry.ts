@@ -4,7 +4,7 @@ import {mat4, vec3} from "gl-matrix";
 import VOXEL_VERTEX_SOURCE from "./../res/voxel.vert";
 import VOXEL_FRAG_SOURCE from "./../res/voxel.frag";
 import {VoxelWorldData} from "./voxel-data/voxelWorldData";
-import {ChunkVoxelPointer, ProvidesVoxelChunkHeadless, VoxelChunkData} from "./voxel-data/voxelChunkData";
+import {VoxelChunkPointer, ProvidesVoxelChunkHeadless, VoxelChunkData} from "./voxel-data/voxelChunkData";
 import {ProvidesVoxelMaterialParsing, VoxelChunkRenderer} from "./voxel-render-core/voxelChunkRenderer";
 import {CHUNK_BLOCK_COUNT} from "./voxel-data/faces";
 import TEXTURES_IMAGE_PATH from "../res/textures.png";
@@ -50,7 +50,7 @@ const render_program = loadProgram(VOXEL_VERTEX_SOURCE, VOXEL_FRAG_SOURCE);
 const material_provider: ProvidesVoxelMaterialParsing<TestChunk, number> = {
     parseMaterialOfVoxel(pointer, face) {
         return {
-            light: [25, 5, 16, 16, 50, 25][face.index],
+            light: [25, 10, 16, 16, 50, 25][face.index],
             texture: Math.floor(Math.random() * 4)
         };
     }
@@ -82,7 +82,7 @@ class TestChunk implements ProvidesVoxelChunkHeadless<TestChunk, number> {
         this.voxel_chunk_data = new VoxelChunkData<TestChunk, number>(this);
     }
 
-    randomize(gl: GlCtx) {
+    mapVoxels(gl: GlCtx, get_desired_state: (pointer: VoxelChunkPointer<TestChunk, number>) => boolean) {
         const { voxel_chunk_data } = this;
         const modified_positions: vec3[] = [];
         const voxel_write_pointer = voxel_chunk_data.getVoxelPointer([0, 0, 0]);
@@ -92,7 +92,7 @@ class TestChunk implements ProvidesVoxelChunkHeadless<TestChunk, number> {
                 for (let z = 0; z < CHUNK_BLOCK_COUNT; z++) {
                     const pos_vec: vec3 = [x, y, z];
                     voxel_write_pointer.moveTo(pos_vec);
-                    const desired_state = Math.random() > 0.5;
+                    const desired_state = get_desired_state(voxel_write_pointer);
                     const current_state = voxel_write_pointer.hasVoxel();
 
                     if (desired_state && !current_state) {
@@ -116,7 +116,7 @@ class TestChunk implements ProvidesVoxelChunkHeadless<TestChunk, number> {
 
 const world = new TestWorld();
 const chunk = world.addChunk(gl, [0, 0, 0]);
-chunk.randomize(gl);
+chunk.mapVoxels(gl, () => Math.random() > 0.5);
 
 // Setup textures
 const my_texture = gl.createTexture()!;

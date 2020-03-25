@@ -1,7 +1,7 @@
 precision mediump float;
 
 // Configuration constants
-const float POS_ENCODING_CHUNK_DIM = 18.0;  // The chunk size is always 2 more than the amount of blocks in the chunk.
+const float POS_ENCODING_CHUNK_DIM = 17.0;  // The chunk size is always 1 more than the amount of blocks in the chunk.
 const float VOXEL_WORLD_SIZE = 1.0;
 
 const float TEXTURE_FRAMES_CX = 2.0;
