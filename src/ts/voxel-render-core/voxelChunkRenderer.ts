@@ -27,8 +27,7 @@ export class VoxelChunkRenderer {
     }
 
     draw(gl: GlCtx) {
-        const { buffer } = this;
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
         gl.drawArrays(gl.TRIANGLES, 0, this.face_set_manager.element_count * 6);  // There are 6 vertices per face. Draw uses vertex count. Therefore, we multiply by 6.
     }
 

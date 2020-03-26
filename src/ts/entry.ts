@@ -59,14 +59,14 @@ class TestWorld {
     private readonly voxel_data = new VoxelWorldData<TestChunk>();
 
     addChunk(gl: GlCtx, chunk_pos: vec3) {
-        const chunk = new TestChunk(gl);
+        const chunk = new TestChunk(gl, chunk_pos);
         this.voxel_data.putChunk(chunk_pos, chunk);
         return chunk;
     }
 
-    draw(gl: GlCtx) {
+    draw(gl: GlCtx, chunk_pos_uniform: WebGLUniformLocation) {
         for (const chunk of this.voxel_data.iterChunks()) {
-            chunk.draw(gl);
+            chunk.draw(gl, chunk_pos_uniform);
         }
     }
 }
@@ -76,7 +76,7 @@ class TestChunk implements ProvidesVoxelChunkHeadless<TestChunk, number> {
     public readonly voxel_renderer: VoxelChunkRenderer;
     private readonly buffer: WebGLBuffer;
 
-    constructor(gl: GlCtx) {
+    constructor(gl: GlCtx, private readonly chunk_pos: vec3) {
         this.buffer = gl.createBuffer()!;
         this.voxel_renderer = new VoxelChunkRenderer(gl, this.buffer);
         this.voxel_chunk_data = new VoxelChunkData<TestChunk, number>(this);
@@ -109,14 +109,17 @@ class TestChunk implements ProvidesVoxelChunkHeadless<TestChunk, number> {
         this.voxel_renderer.handleModifiedVoxelPlacements(gl, this, modified_positions, material_provider);
     }
 
-    draw(gl: GlCtx) {
+    draw(gl: GlCtx, chunk_pos_uniform: WebGLUniformLocation) {
+        const { chunk_pos } = this;
+        gl.uniform3f(chunk_pos_uniform, chunk_pos[0], chunk_pos[1], chunk_pos[2]);
         this.voxel_renderer.draw(gl);
     }
 }
 
 const world = new TestWorld();
-const chunk = world.addChunk(gl, [0, 0, 0]);
-chunk.mapVoxels(gl, () => Math.random() > 0.5);
+const chunk = world.addChunk(gl, [0, 0, 0]);  // TODO: Fix broken buffer logic in multi-chunk setups.
+chunk.mapVoxels(gl, ptr => Math.random() > 0.5);
+(window as any).world = world;
 
 // Setup textures
 const my_texture = gl.createTexture()!;
@@ -174,6 +177,7 @@ const camera_pos: vec3 = [0.5, 0.5, 4];
 const camera_ang = [0, 0];
 const keys_down: Record<string, true> = {};
 
+const chunk_pos_uniform = gl.getUniformLocation(render_program, "chunk_pos")!;
 function draw() {
     requestAnimationFrame(draw);
 
@@ -232,7 +236,7 @@ function draw() {
     gl.uniformMatrix4fv(upos_view, false, view_mat);
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    world.draw(gl);
+    world.draw(gl, chunk_pos_uniform);
 }
 
 draw();

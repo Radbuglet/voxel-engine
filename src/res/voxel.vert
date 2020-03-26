@@ -29,11 +29,13 @@ varying vec2 uv;
 void main() {
     // Voxel world position resolver
     float vy_unwrapped = floor(pos_idx / POS_ENCODING_CHUNK_DIM);
-    vec3 world_pos = VOXEL_WORLD_SIZE * (chunk_pos + vec3(
-        mod(pos_idx, POS_ENCODING_CHUNK_DIM),
-        mod(vy_unwrapped, POS_ENCODING_CHUNK_DIM),
-        floor(vy_unwrapped / POS_ENCODING_CHUNK_DIM)
-    ));
+    vec3 world_pos = VOXEL_WORLD_SIZE * (
+        chunk_pos * (POS_ENCODING_CHUNK_DIM - 1.0) +
+        vec3(
+            mod(pos_idx, POS_ENCODING_CHUNK_DIM),
+            mod(vy_unwrapped, POS_ENCODING_CHUNK_DIM),
+            floor(vy_unwrapped / POS_ENCODING_CHUNK_DIM))
+    );
 
     // Texture processing
     float texture_idx = floor(mat_data / 256.0);  // 8<texture_id>

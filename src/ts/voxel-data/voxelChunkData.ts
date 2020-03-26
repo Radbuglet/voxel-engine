@@ -1,5 +1,6 @@
 import {vec3} from "gl-matrix";
 import {CHUNK_BLOCK_COUNT, encodeChunkPos, FaceDefinition, FaceKey} from "./faces";
+import {signedModulo} from "../helpers/scalar";
 
 export interface ProvidesVoxelChunkHeadless<TChunkWrapper extends ProvidesVoxelChunkHeadless<TChunkWrapper, TVoxel>, TVoxel> {
     voxel_chunk_data: VoxelChunkData<TChunkWrapper, TVoxel>;
@@ -50,9 +51,11 @@ export class VoxelChunkPointer<TChunkWrapper extends ProvidesVoxelChunkHeadless<
     getNeighbor(face: FaceDefinition): VoxelChunkPointer<TChunkWrapper, TVoxel> | null {
         const new_pos = vec3.create();
         vec3.add(new_pos, this.pos, face.vec_relative);
-        if (new_pos[face.axis.vec_axis] < 0 || new_pos[face.axis.vec_axis] >= CHUNK_BLOCK_COUNT) {  // No longer in the chunk bounds.
+        const face_axis_value = new_pos[face.axis.vec_axis];
+        if (face_axis_value < 0 || face_axis_value >= CHUNK_BLOCK_COUNT) {  // No longer in the chunk bounds.
             const new_chunk = this.chunk_wrapped.voxel_chunk_data.neighbors.get(face.towards_key);
             if (new_chunk == null) return null;
+            new_pos[face.axis.vec_axis] = signedModulo(face_axis_value, CHUNK_BLOCK_COUNT);
             return new VoxelChunkPointer<TChunkWrapper, TVoxel>(new_chunk, new_pos, encodeChunkPos(new_pos));
         } else {
             return new VoxelChunkPointer<TChunkWrapper, TVoxel>(this.chunk_wrapped, new_pos, this.encoded_pos + face.encoded_relative);
