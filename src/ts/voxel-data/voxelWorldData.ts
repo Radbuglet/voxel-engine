@@ -1,4 +1,4 @@
-import {ProvidesVoxelChunkHeadless} from "./voxelChunkData";
+import {IVoxelChunkHeadlessWrapper} from "./voxelChunkData";
 import {vec3} from "gl-matrix";
 import {FaceDefinition, FACES_LIST} from "./faces";
 
@@ -7,7 +7,7 @@ import {FaceDefinition, FACES_LIST} from "./faces";
  * This object manages anything that provides this class its corresponding voxel chunk data objects.
  * Additionally, the voxels you store in this system can be any type you want.
  */
-export class VoxelWorldData<TChunkWrapper extends ProvidesVoxelChunkHeadless<TChunkWrapper, any>> {
+export class VoxelWorldData<TChunkWrapper extends IVoxelChunkHeadlessWrapper<TChunkWrapper, any>> {
     private readonly chunks = new Map<string, TChunkWrapper>();
 
     private static encodeChunkPosition(pos: vec3) {

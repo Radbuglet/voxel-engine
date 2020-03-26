@@ -89,17 +89,11 @@ export class GlSetBuffer {
         }
 
         // Update GPU buffer
-        try {
-            if (this.buffer_write_idx > this.buffer_capacity) {  // We need to resize the array.
-                this.resizeCapacity(gl);  // By rewriting array data to the new location, we effectively upload the new data so we can stop here.
-            } else {  // There's still space in the buffer meaning we should just modify using bufferSubData()
-                gl.bufferSubData(gl.ARRAY_BUFFER, insertion_root_idx, elements_view);
-            }
+        if (this.buffer_write_idx > this.buffer_capacity) {  // We need to resize the array.
+            return this.resizeCapacity(gl);  // By rewriting array data to the new location, we effectively upload the new data so we can stop here.
+        } else {  // There's still space in the buffer meaning we should just modify using bufferSubData()
+            gl.bufferSubData(gl.ARRAY_BUFFER, insertion_root_idx, elements_view);
             return true;
-        } catch (e) {  // Restore the CPU mirror to its previous state if the GPU insertion failed, effectively cancelling the operation.
-            elements_mirror.length = elements_mirror.length - elements_view.byteLength / elem_byte_size;  // Yup, this actually works like you'd expect it to.
-            this.buffer_write_idx = insertion_root_idx;  // Since this value was copied before any modification happened, we can use it for this purpose as well.
-            return false;
         }
     }
 
@@ -163,15 +157,18 @@ export class GlSetBuffer {
      * This method will never resize the buffer below the length of the data stored.
      * PRECONDITION: This method expects that the target buffer is bound to the ARRAY_BUFFER register.
      * @param gl: The WebGL context used by the target buffer.
-     * @throws gl.OUT_OF_MEMORY. Note: by itself, resizeCapacity() will NOT corrupt the CPU mirror if this is thrown.
+     * @returns a boolean representing the success state. If true, the buffer was resized.
+     * If false, the buffer wasn't able to be resized due to a gl.OUT_OF_MEMORY exception.
+     *
+     * Note: by itself, resizeCapacity() will NOT corrupt the CPU mirror if this action is unsuccessful.
      * However, methods relying on resizeCapacity() might need to handle this error and undo any of their CPU mirrored
      * state changes.
      */
-    resizeCapacity(gl: GlCtx) {
+    resizeCapacity(gl: GlCtx): boolean {
         const { elem_byte_size, element_count } = this;
         // Figure out new buffer capacity size
         const new_capacity = GlSetBuffer.getIdealCapacityBytes(elem_byte_size, element_count, this.get_ideal_capacity);  // Capacity is in bytes, despite get_ideal_capacity returning words.
-        if (new_capacity == this.buffer_capacity) return;  // Nothing will change so we ignore this operation.
+        if (new_capacity == this.buffer_capacity) return true;  // Nothing will change so we ignore this operation.
 
         // Generate data buffer to upload
         const rewrite_data_buffer = new Uint8Array(new_capacity);
@@ -187,8 +184,13 @@ export class GlSetBuffer {
         }
 
         // Upload it!
-        gl.bufferData(gl.ARRAY_BUFFER, rewrite_data_buffer, gl.DYNAMIC_DRAW);
-        this.buffer_capacity = new_capacity;
+        try {
+            gl.bufferData(gl.ARRAY_BUFFER, rewrite_data_buffer, gl.DYNAMIC_DRAW);
+            this.buffer_capacity = new_capacity;
+            return true;
+        } catch {
+            return false;
+        }
     }
 
     /**

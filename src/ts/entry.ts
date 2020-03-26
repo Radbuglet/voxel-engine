@@ -4,12 +4,8 @@ import {mat4, vec3} from "gl-matrix";
 import VOXEL_VERTEX_SOURCE from "./../res/voxel.vert";
 import VOXEL_FRAG_SOURCE from "./../res/voxel.frag";
 import {VoxelWorldData} from "./voxel-data/voxelWorldData";
-import {VoxelChunkPointer, ProvidesVoxelChunkHeadless, VoxelChunkData} from "./voxel-data/voxelChunkData";
-import {
-    ProvidesVoxelMaterialParsing,
-    VoxelChunkRenderer,
-    VoxelRenderingProgramSpecs
-} from "./voxel-render-core/voxelChunkRenderer";
+import {VoxelChunkPointer, IVoxelChunkHeadlessWrapper, VoxelChunkData} from "./voxel-data/voxelChunkData";
+import {IVoxelMaterialProvider, VoxelChunkRenderer, VoxelRenderingProgramSpecs} from "./voxel-render-core/voxelChunkRenderer";
 import {CHUNK_BLOCK_COUNT} from "./voxel-data/faces";
 import TEXTURES_IMAGE_PATH from "../res/textures.png";
 import {GlCtx} from "./helpers/typescript/aliases";
@@ -51,7 +47,7 @@ function loadProgram(vertex_source: string, fragment_source: string) {
 const render_program = loadProgram(VOXEL_VERTEX_SOURCE, VOXEL_FRAG_SOURCE);
 
 // Setup the chunk data array buffer
-const material_provider: ProvidesVoxelMaterialParsing<TestChunk, number> = {
+const material_provider: IVoxelMaterialProvider<TestChunk, number> = {
     parseMaterialOfVoxel(pointer, face) {
         return {
             light: [25, 10, 16, 16, 50, 25][face.index],
@@ -75,7 +71,7 @@ class TestWorld {
     }
 }
 
-class TestChunk implements ProvidesVoxelChunkHeadless<TestChunk, number> {
+class TestChunk implements IVoxelChunkHeadlessWrapper<TestChunk, number> {
     public readonly voxel_chunk_data: VoxelChunkData<TestChunk, number>;
     public readonly voxel_renderer: VoxelChunkRenderer;
     private readonly buffer: WebGLBuffer;
@@ -114,18 +110,19 @@ class TestChunk implements ProvidesVoxelChunkHeadless<TestChunk, number> {
     }
 
     draw(gl: GlCtx, program_specs: VoxelRenderingProgramSpecs) {
-        const { chunk_pos } = this;
-        this.voxel_renderer.draw(gl, program_specs, chunk_pos);
+        this.voxel_renderer.draw(gl, program_specs, this.chunk_pos);
     }
 }
 
 const world = new TestWorld();
 const chunk = world.addChunk(gl, [0, 0, 0]);
-chunk.mapVoxels(gl, () => Math.random() > 0.5);
+chunk.mapVoxels(gl, ptr => true);
 
 const chunk2 = world.addChunk(gl, [1, 0, 0]);
-chunk2.mapVoxels(gl, () => Math.random() > 0.9);
-(window as any).world = world;
+chunk2.mapVoxels(gl, ptr => Math.random() > ptr.pos[0] / CHUNK_BLOCK_COUNT);
+(window as any).gl = gl;
+(window as any).chunk = chunk;
+(window as any).chunk2 = chunk2;
 
 // Setup textures
 const my_texture = gl.createTexture()!;

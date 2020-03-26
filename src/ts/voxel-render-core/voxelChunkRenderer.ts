@@ -2,10 +2,14 @@ import {GlSetBuffer, SetBufferElem} from "../helpers/memory/glSetBuffer";
 import {GlCtx, IntBool} from "../helpers/typescript/aliases";
 import {vec3} from "gl-matrix";
 import {FaceDefinition, FACES, FACES_LIST} from "../voxel-data/faces";
-import {VoxelChunkPointer, ProvidesVoxelChunkHeadless} from "../voxel-data/voxelChunkData";
+import {VoxelChunkPointer, IVoxelChunkHeadlessWrapper} from "../voxel-data/voxelChunkData";
 
-export interface ProvidesVoxelMaterialParsing<TChunkWrapper extends ProvidesVoxelChunkHeadless<TChunkWrapper, TVoxel>, TVoxel> {
-    parseMaterialOfVoxel(pointer: VoxelChunkPointer<TChunkWrapper, TVoxel>, face: FaceDefinition): { texture: number, light: number};  // TODO: first argument shouldn't point to root chunk but rather the chunk containing the pointer.
+export interface IVoxelMaterialProvider<TChunkWrapper extends IVoxelChunkHeadlessWrapper<TChunkWrapper, TVoxel>, TVoxel> {
+    parseMaterialOfVoxel(pointer: VoxelChunkPointer<TChunkWrapper, TVoxel>, face: FaceDefinition): { texture: number, light: number};
+}
+
+export interface IVoxelChunkRendererWrapper {
+    voxel_chunk_renderer: VoxelChunkRenderer
 }
 
 export type VoxelRenderingProgramSpecs = {
@@ -23,7 +27,7 @@ type FaceToAdd = {
 };
 export class VoxelChunkRenderer {
     private readonly face_set_manager: GlSetBuffer;
-    private readonly faces = new Map<number, SetBufferElem | null>();  // Key is an encoded face obtained from the face template.
+    private readonly faces = new Map<number, SetBufferElem | null>();  // Key is an encoded face obtained from the face template. null represents a placeholder face that is about to be created on the GPU.
 
     constructor(gl: GlCtx, private readonly buffer: WebGLBuffer) {
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -38,7 +42,7 @@ export class VoxelChunkRenderer {
         gl.drawArrays(gl.TRIANGLES, 0, this.face_set_manager.element_count * 6);  // There are 6 vertices per face. Draw uses vertex count. Therefore, we multiply by 6.
     }
 
-    handleModifiedVoxelPlacements<TChunkWrapper extends ProvidesVoxelChunkHeadless<TChunkWrapper, TVoxel>, TVoxel>(gl: GlCtx, chunk: TChunkWrapper, modified_locations: Iterable<vec3>, material_provider: ProvidesVoxelMaterialParsing<TChunkWrapper, TVoxel>) {  // TODO: Add support for slabs.
+    handleModifiedVoxelPlacements<TChunkWrapper extends IVoxelChunkHeadlessWrapper<TChunkWrapper, TVoxel>, TVoxel>(gl: GlCtx, chunk: TChunkWrapper, modified_locations: Iterable<vec3>, material_provider: IVoxelMaterialProvider<TChunkWrapper, TVoxel>) {  // TODO: Add support for slabs.
         const { face_set_manager, faces } = this;
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
 
@@ -126,7 +130,7 @@ export class VoxelChunkRenderer {
         if (!face_set_manager.addElementsExternRefHandle(gl, face_elements_buffer, (face_idx, face_ref) => {
             faces.set(faces_to_add[face_idx].encoded_face_key, face_ref);
         })) {
-            // TODO: Handle failure.
+            throw "Fatal error while modifying chunk: out of VRAM!";
         }
     }
 
