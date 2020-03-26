@@ -4,6 +4,15 @@ import {vec3} from "gl-matrix";
 import {FaceDefinition, FACES, FACES_LIST} from "../voxel-data/faces";
 import {VoxelChunkPointer, ProvidesVoxelChunkHeadless} from "../voxel-data/voxelChunkData";
 
+export interface ProvidesVoxelMaterialParsing<TChunkWrapper extends ProvidesVoxelChunkHeadless<TChunkWrapper, TVoxel>, TVoxel> {
+    parseMaterialOfVoxel(pointer: VoxelChunkPointer<TChunkWrapper, TVoxel>, face: FaceDefinition): { texture: number, light: number};  // TODO: first argument shouldn't point to root chunk but rather the chunk containing the pointer.
+}
+
+export type VoxelRenderingProgramSpecs = {
+    uniform_chunk_pos: WebGLUniformLocation,
+    attrib_vertex_data: number
+};
+
 type FaceToAdd = {
     encoded_voxel_pos: number,
     encoded_face_key: number,
@@ -12,10 +21,6 @@ type FaceToAdd = {
     mat_texture: number,
     mat_light: number
 };
-export interface ProvidesVoxelMaterialParsing<TChunkWrapper extends ProvidesVoxelChunkHeadless<TChunkWrapper, TVoxel>, TVoxel> {
-    parseMaterialOfVoxel(pointer: VoxelChunkPointer<TChunkWrapper, TVoxel>, face: FaceDefinition): { texture: number, light: number};  // TODO: first argument shouldn't point to root chunk but rather the chunk containing the pointer.
-}
-
 export class VoxelChunkRenderer {
     private readonly face_set_manager: GlSetBuffer;
     private readonly faces = new Map<number, SetBufferElem | null>();  // Key is an encoded face obtained from the face template.
@@ -26,8 +31,10 @@ export class VoxelChunkRenderer {
             gl, 24, required_capacity => required_capacity * 1.5 + 6 * 10);
     }
 
-    draw(gl: GlCtx) {
+    draw(gl: GlCtx, program_specs: VoxelRenderingProgramSpecs, chunk_pos: vec3) {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
+        gl.uniform3fv(program_specs.uniform_chunk_pos, chunk_pos);
+        gl.vertexAttribPointer(program_specs.attrib_vertex_data, 2, gl.UNSIGNED_SHORT, false, 0, 0);
         gl.drawArrays(gl.TRIANGLES, 0, this.face_set_manager.element_count * 6);  // There are 6 vertices per face. Draw uses vertex count. Therefore, we multiply by 6.
     }
 

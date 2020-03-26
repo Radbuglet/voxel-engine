@@ -5,7 +5,11 @@ import VOXEL_VERTEX_SOURCE from "./../res/voxel.vert";
 import VOXEL_FRAG_SOURCE from "./../res/voxel.frag";
 import {VoxelWorldData} from "./voxel-data/voxelWorldData";
 import {VoxelChunkPointer, ProvidesVoxelChunkHeadless, VoxelChunkData} from "./voxel-data/voxelChunkData";
-import {ProvidesVoxelMaterialParsing, VoxelChunkRenderer} from "./voxel-render-core/voxelChunkRenderer";
+import {
+    ProvidesVoxelMaterialParsing,
+    VoxelChunkRenderer,
+    VoxelRenderingProgramSpecs
+} from "./voxel-render-core/voxelChunkRenderer";
 import {CHUNK_BLOCK_COUNT} from "./voxel-data/faces";
 import TEXTURES_IMAGE_PATH from "../res/textures.png";
 import {GlCtx} from "./helpers/typescript/aliases";
@@ -64,9 +68,9 @@ class TestWorld {
         return chunk;
     }
 
-    draw(gl: GlCtx, chunk_pos_uniform: WebGLUniformLocation) {
+    draw(gl: GlCtx, program_specs: VoxelRenderingProgramSpecs) {
         for (const chunk of this.voxel_data.iterChunks()) {
-            chunk.draw(gl, chunk_pos_uniform);
+            chunk.draw(gl, program_specs);
         }
     }
 }
@@ -109,16 +113,18 @@ class TestChunk implements ProvidesVoxelChunkHeadless<TestChunk, number> {
         this.voxel_renderer.handleModifiedVoxelPlacements(gl, this, modified_positions, material_provider);
     }
 
-    draw(gl: GlCtx, chunk_pos_uniform: WebGLUniformLocation) {
+    draw(gl: GlCtx, program_specs: VoxelRenderingProgramSpecs) {
         const { chunk_pos } = this;
-        gl.uniform3f(chunk_pos_uniform, chunk_pos[0], chunk_pos[1], chunk_pos[2]);
-        this.voxel_renderer.draw(gl);
+        this.voxel_renderer.draw(gl, program_specs, chunk_pos);
     }
 }
 
 const world = new TestWorld();
-const chunk = world.addChunk(gl, [0, 0, 0]);  // TODO: Fix broken buffer logic in multi-chunk setups.
-chunk.mapVoxels(gl, ptr => Math.random() > 0.5);
+const chunk = world.addChunk(gl, [0, 0, 0]);
+chunk.mapVoxels(gl, () => Math.random() > 0.5);
+
+const chunk2 = world.addChunk(gl, [1, 0, 0]);
+chunk2.mapVoxels(gl, () => Math.random() > 0.9);
 (window as any).world = world;
 
 // Setup textures
@@ -156,7 +162,6 @@ const my_texture = gl.createTexture()!;
 // Setup vertex accessing
 const vslot_data = gl.getAttribLocation(render_program, "vertex_data");
 gl.enableVertexAttribArray(vslot_data);  // Tells the vertex shader to use the VAP instead of a constant.
-gl.vertexAttribPointer(vslot_data, 2, gl.UNSIGNED_SHORT, false, 0, 0);  // Specify how to lookup vertices at the "vertex slot"
 
 // Draw
 canvas.width = window.innerWidth;
@@ -236,7 +241,10 @@ function draw() {
     gl.uniformMatrix4fv(upos_view, false, view_mat);
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    world.draw(gl, chunk_pos_uniform);
+    world.draw(gl, {
+        attrib_vertex_data: vslot_data,
+        uniform_chunk_pos: chunk_pos_uniform
+    });
 }
 
 draw();
