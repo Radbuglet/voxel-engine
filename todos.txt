@@ -5,5 +5,4 @@ TODO: Clean up logic
 TODO: Document remaining classes
 TODO: Add assertions to prevent stupid bugs.
 TODO: Remake face system so it's more extendable
-TODO: Stop Browserify from de-optimizing the code such that it can run on ancient computers because it's really not going to work either way and it just makes the app run slower.
 TODO: Clean up internal comments

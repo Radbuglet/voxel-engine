@@ -35,7 +35,7 @@ export class VoxelChunkRenderer {
         gl.drawArrays(gl.TRIANGLES, 0, this.face_set_manager.element_count * 6);  // There are 6 vertices per face. Draw uses vertex count. Therefore, we multiply by 6.
     }
 
-    handleModifiedVoxelPlacements<TChunkWrapper extends IVoxelChunkHeadlessWrapper<TChunkWrapper, TVoxel>, TVoxel>(gl: GlCtx, chunk: TChunkWrapper, modified_locations: Iterable<vec3>, material_provider: IVoxelMaterialProvider<TChunkWrapper, TVoxel>) {  // TODO: Add support for slabs.
+    handleModifiedVoxelPlacements<TChunkWrapper extends IVoxelChunkHeadlessWrapper<TChunkWrapper, TVoxel> & IVoxelChunkRendererWrapper, TVoxel>(gl: GlCtx, chunk: TChunkWrapper, modified_locations: Iterable<vec3>, material_provider: IVoxelMaterialProvider<TChunkWrapper, TVoxel>) {  // TODO: Add support for slabs.
         const {face_set_manager, faces} = this;
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
 
@@ -50,6 +50,10 @@ export class VoxelChunkRenderer {
             mat_light: number
         };
 
+        const neighbor_chunk_modifications = new Map<VoxelChunkRenderer, {
+            faces_to_delete: SetBufferElem[],
+            faces_to_add: FaceToAdd[]
+        }>();
         const faces_to_add: FaceToAdd[] = [];
         {
             // Utils
@@ -68,16 +72,28 @@ export class VoxelChunkRenderer {
                 }
             }
 
-            function deleteFace(face_map: CpuFaceMap, owner_pointer: VoxelChunkPointer<TChunkWrapper, TVoxel>, face: FaceDefinition) {  // TODO: What about neighbors in neighboring chunks?
+            function deleteFace(face_map: CpuFaceMap, owner_pointer: VoxelChunkPointer<TChunkWrapper, TVoxel>, face: FaceDefinition): SetBufferElem | null | undefined {
                 const encoded_face_key = face.axis.encodeFaceKey(owner_pointer.encoded_pos, face.axis_sign);
                 const face_mirror = face_map.get(encoded_face_key);
                 if (face_mirror != null) {  // undefined => no face ie deleted, null face => face is placeholder (shouldn't happen, more for type safety)
                     face_map.delete(encoded_face_key);
-                    face_set_manager.removeElement(gl, face_mirror);
                 }
+                return face_mirror;
             }
 
-            // Generate modification buffers
+            function getChunkModificationBuffer(chunk: VoxelChunkRenderer) {
+                let modification_buffer = neighbor_chunk_modifications.get(chunk);
+                if (modification_buffer == null) {
+                    modification_buffer = {
+                        faces_to_add: [],
+                        faces_to_delete: []
+                    };
+                    neighbor_chunk_modifications.set(chunk, modification_buffer);
+                }
+                return modification_buffer;
+            }
+
+            // Generate modification buffers  TODO: Simplify cases; expand such that batched updates can concern more than one chunk at a time.
             const root_pointer = chunk_data.getVoxelPointer(vec3.create());
             for (const root_vec of modified_locations) {
                 root_pointer.moveTo(root_vec);
@@ -89,18 +105,32 @@ export class VoxelChunkRenderer {
 
                     if (root_now_solid) {  // This voxel has been PLACED
                         if (neighbor_is_solid) {  // There might be a redundant face here if the neighbor was constructed in an earlier batch. Time to "simplify" the neighboring voxel!
-                            deleteFace(faces, neighbor_pointer!, FACES[face_definition.inverse_key]);
+                            const neighbor_chunk = neighbor_pointer!.chunk_wrapped;
+                            const face_to_delete = deleteFace(neighbor_chunk.voxel_chunk_renderer.faces, neighbor_pointer!, FACES[face_definition.inverse_key]);
+                            if (face_to_delete != null) {
+                                if (root_pointer.chunk_wrapped != neighbor_chunk) {
+                                    const neighbor_modification_buffer = getChunkModificationBuffer(neighbor_chunk.voxel_chunk_renderer);
+                                    neighbor_modification_buffer.faces_to_delete.push(face_to_delete);
+                                } else {
+                                    face_set_manager.removeElement(gl, face_to_delete);
+                                }
+                            }
                         } else {  // We need to make one of our faces here.
                             addFace(faces_to_add, faces, root_pointer, face_definition);
                         }
 
                     } else {  // This voxel has been BROKEN
                         if (neighbor_is_solid) {  // We might need to repair the block which we "simplified" when the root was extant if that voxel is from a previous batch.
-                            // If its in the first batch we may not want to repair it if the new voxel already created that face, hence why we ensure this action is conditional.
-                            addFace(faces_to_add, faces, neighbor_pointer!, FACES[face_definition.inverse_key]);  // TODO: What about neighbors in neighboring chunks?
+                            const neighbor_chunk = neighbor_pointer!.chunk_wrapped;
+                            if (root_pointer.chunk_wrapped != neighbor_chunk) {
+                                const neighbor_modification_buffer = getChunkModificationBuffer(neighbor_chunk.voxel_chunk_renderer);
+                                addFace(neighbor_modification_buffer.faces_to_add, neighbor_chunk.voxel_chunk_renderer.faces, neighbor_pointer!, FACES[face_definition.inverse_key]);
+                            } else {
+                                addFace(faces_to_add, faces, neighbor_pointer!, FACES[face_definition.inverse_key]);
+                            }
                         }
 
-                        // We need to delete all faces that belonged to us, no matter what.
+                        // The lack of an "else" here is intentional.
                         deleteFace(faces, root_pointer, face_definition);  // This is one of our faces hence why we don't flip the side.
                     }
                 }
@@ -126,6 +156,8 @@ export class VoxelChunkRenderer {
         })) {
             throw "Fatal error while modifying chunk: out of VRAM!";
         }
+
+        // TODO: Apply changes to neighboring chunk.
     }
 
     handleModifiedVoxelMaterials() {
