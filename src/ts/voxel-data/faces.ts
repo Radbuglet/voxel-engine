@@ -37,7 +37,7 @@ export class FaceAxis {
         this.face_opp_rel_encoded = UNIT_AXIS_ENCODED[vec_axis];
     }
 
-    appendQuadData(target: Uint16Array, target_offset: number, encoded_origin: number, sign: IntBool, face_flipped: IntBool, face_texture: number, face_light: number) {
+    appendQuadData(target: Uint16Array, target_offset: number, encoded_origin: number, sign: IntBool, face_texture: number, face_light: number) {
         const {encoded_vertices, face_opp_rel_encoded} = this;
         const common_vert_pos_encoded = encoded_origin + (sign == 1 ? face_opp_rel_encoded : 0);
         const common_material_encoded = encodeMaterialData([face_light, face_texture], 2);
@@ -49,18 +49,17 @@ export class FaceAxis {
         }
 
         writeVertex(0, encoded_vertices[0]);
-        writeVertex(2, encoded_vertices[sign == face_flipped ? 2 : 1]);
-        writeVertex(4, encoded_vertices[sign == face_flipped ? 1 : 2]);
+        writeVertex(2, encoded_vertices[sign == 0 ? 2 : 1]);
+        writeVertex(4, encoded_vertices[sign == 0 ? 1 : 2]);
 
         writeVertex(6, encoded_vertices[3]);
-        writeVertex(8, encoded_vertices[sign == face_flipped ? 5 : 4]);
-        writeVertex(10, encoded_vertices[sign == face_flipped ? 4 : 5]);
+        writeVertex(8, encoded_vertices[sign == 0 ? 5 : 4]);
+        writeVertex(10, encoded_vertices[sign == 0 ? 4 : 5]);
     }
 
-    encodeFaceKey(encoded_origin: number, sign: IntBool, face_flipped: IntBool) {
+    encodeFaceKey(encoded_origin: number, sign: IntBool) {
         const {vec_axis, face_opp_rel_encoded} = this;
-        const face_direction = sign == face_flipped ? 0 : 1;  // DEMO: face(0) == flipped(0) ? 0 (normal)  face(0) == flipped(1) : 1
-        return encoded_origin + (sign == 1 ? face_opp_rel_encoded : 0) + encodeChunkPos([vec_axis, face_direction], 3);
+        return encoded_origin + (sign == 1 ? face_opp_rel_encoded : 0) + encodeChunkPos([vec_axis, sign], 3);
     }
 }
 

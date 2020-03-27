@@ -1,7 +1,7 @@
 import {GlSetBuffer, SetBufferElem} from "../helpers/memory/glSetBuffer";
 import {GlCtx, IntBool} from "../helpers/typescript/aliases";
 import {vec3} from "gl-matrix";
-import {FaceDefinition, FACES, FACES_LIST} from "../voxel-data/faces";
+import {FaceAxis, FaceDefinition, FACES, FACES_LIST} from "../voxel-data/faces";
 import {IVoxelChunkHeadlessWrapper, VoxelChunkPointer} from "../voxel-data/voxelChunkData";
 
 export interface IVoxelMaterialProvider<TChunkWrapper extends IVoxelChunkHeadlessWrapper<TChunkWrapper, TVoxel>, TVoxel> {
@@ -17,18 +17,10 @@ export type VoxelRenderingProgramSpecs = {
     attrib_vertex_data: number
 };
 
-type FaceToAdd = {
-    encoded_voxel_pos: number,
-    encoded_face_key: number,
-    face_flipped: IntBool,
-    face_definition: FaceDefinition,
-    mat_texture: number,
-    mat_light: number
-};
-
+type CpuFaceMap = Map<number, SetBufferElem | null>;
 export class VoxelChunkRenderer {
     private readonly face_set_manager: GlSetBuffer;
-    private readonly faces = new Map<number, SetBufferElem | null>();  // Key is an encoded face obtained from the face template. null represents a placeholder face that is about to be created on the GPU.
+    private readonly faces: CpuFaceMap = new Map();  // Key is an encoded face obtained from the face template. null represents a placeholder face that is about to be created on the GPU.
 
     constructor(gl: GlCtx, private readonly buffer: WebGLBuffer) {
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -49,85 +41,86 @@ export class VoxelChunkRenderer {
 
         // Find faces to add; remove bad faces
         const chunk_data = chunk.voxel_chunk_data;
+        type FaceToAdd = {
+            encoded_voxel_pos: number,
+            encoded_face_key: number,
+            face_definition: FaceDefinition,
+
+            mat_texture: number,
+            mat_light: number
+        };
+
         const faces_to_add: FaceToAdd[] = [];
         {
+            // Utils
+            function addFace(modifications_array: FaceToAdd[], face_map: CpuFaceMap, owner_pointer: VoxelChunkPointer<TChunkWrapper, TVoxel>, face: FaceDefinition) {
+                const material = material_provider.parseMaterialOfVoxel(owner_pointer, face);
+                const encoded_face_key = face.axis.encodeFaceKey(owner_pointer.encoded_pos, face.axis_sign);
+                if (!face_map.has(encoded_face_key)) {  // Prevent double face creation if neighbor destruction and voxel empty face creation in same batch try to make the same face.
+                    face_map.set(encoded_face_key, null);  // Put a placeholder.
+                    modifications_array.push({
+                        encoded_voxel_pos: owner_pointer.encoded_pos,
+                        encoded_face_key,
+                        face_definition: face,
+                        mat_texture: material.texture,
+                        mat_light: material.light
+                    })
+                }
+            }
+
+            function deleteFace(face_map: CpuFaceMap, owner_pointer: VoxelChunkPointer<TChunkWrapper, TVoxel>, face: FaceDefinition) {  // TODO: What about neighbors in neighboring chunks?
+                const encoded_face_key = face.axis.encodeFaceKey(owner_pointer.encoded_pos, face.axis_sign);
+                const face_mirror = face_map.get(encoded_face_key);
+                if (face_mirror != null) {  // undefined => no face ie deleted, null face => face is placeholder (shouldn't happen, more for type safety)
+                    face_map.delete(encoded_face_key);
+                    face_set_manager.removeElement(gl, face_mirror);
+                }
+            }
+
+            // Generate modification buffers
             const root_pointer = chunk_data.getVoxelPointer(vec3.create());
             for (const root_vec of modified_locations) {
                 root_pointer.moveTo(root_vec);
                 const root_now_solid = root_pointer.hasVoxel();
 
-                for (const neighboring_face of FACES_LIST) {  // TODO: What about neighbors in neighboring chunks?
-                    const neighbor_pointer = root_pointer.getNeighbor(neighboring_face);
+                for (const face_definition of FACES_LIST) {
+                    const neighbor_pointer = root_pointer.getNeighbor(face_definition);
                     const neighbor_is_solid = neighbor_pointer != null && neighbor_pointer.hasVoxel();
 
-                    function encodeFaceKey(face_flipped: IntBool) {
-                        return neighboring_face.axis.encodeFaceKey(root_pointer.encoded_pos, neighboring_face.axis_sign, face_flipped);
-                    }
-
-                    function addFace(texture: number, light: number, face_flipped: IntBool) {
-                        const encoded_face_key = encodeFaceKey(face_flipped);
-                        // This check exists to prevent a face from being created by the destruction of a voxel if the voxel
-                        // the face is intended to "repair" is also in the same operation and also plans on creating their own face
-                        // with the new-found void.
-                        if (!faces.has(encoded_face_key)) {
-                            faces.set(encoded_face_key, null); // Null serves as a placeholder to avoid double face creation from an addition surround and a deletion patch.
-                            faces_to_add.push({
-                                face_definition: neighboring_face,
-                                encoded_voxel_pos: root_pointer.encoded_pos,
-                                face_flipped,
-                                encoded_face_key,
-                                mat_texture: texture,
-                                mat_light: light
-                            });
-                        }
-                    }
-
-                    function tryToDeleteFace(face_flipped: IntBool) {
-                        const encoded_face_key = encodeFaceKey(face_flipped);
-                        const face_ref = faces.get(encoded_face_key);
-                        if (face_ref != null) {  // Ensures the face is not a phantom face or a placeholder.
-                            face_set_manager.removeElement(gl, face_ref);
-                            faces.delete(encoded_face_key);
-                        }
-                    }
-
                     if (root_now_solid) {  // This voxel has been PLACED
-                        if (neighbor_is_solid) {  // There might be a redundant face here if the neighbor was constructed in an earlier batch.
-                            tryToDeleteFace(1);  // This is a face pointing towards the root, not outwards and we should flip accordingly.
-                        } else {  // A face needs to be here.
-                            const material = material_provider.parseMaterialOfVoxel(root_pointer, neighboring_face);
-                            addFace(material.texture, material.light, 0);  // Normal mode is pointing away from the root, which is desired here.
+                        if (neighbor_is_solid) {  // There might be a redundant face here if the neighbor was constructed in an earlier batch. Time to "simplify" the neighboring voxel!
+                            deleteFace(faces, neighbor_pointer!, FACES[face_definition.inverse_key]);
+                        } else {  // We need to make one of our faces here.
+                            addFace(faces_to_add, faces, root_pointer, face_definition);
                         }
 
                     } else {  // This voxel has been BROKEN
                         if (neighbor_is_solid) {  // We might need to repair the block which we "simplified" when the root was extant if that voxel is from a previous batch.
-                            const material = material_provider.parseMaterialOfVoxel(neighbor_pointer!, FACES[neighboring_face.inverse_key]);  // Neighbor pointer must be non null as the neighbor is solid.
-
                             // If its in the first batch we may not want to repair it if the new voxel already created that face, hence why we ensure this action is conditional.
-                            addFace(material.texture, material.light, 1); // Flipped mode is pointing towards the root. Our intended behavior is that this face is pointing outwards of the neighbor thus towards the root.
+                            addFace(faces_to_add, faces, neighbor_pointer!, FACES[face_definition.inverse_key]);  // TODO: What about neighbors in neighboring chunks?
                         }
 
                         // We need to delete all faces that belonged to us, no matter what.
-                        tryToDeleteFace(0);  // This is one of our faces hence why we don't flip the side.
+                        deleteFace(faces, root_pointer, face_definition);  // This is one of our faces hence why we don't flip the side.
                     }
                 }
             }
         }
 
-        // Add new faces
+        // Transform faces from their CPU version to their GPU face data encoded version
         const face_elements_buffer = new Uint16Array(faces_to_add.length * 12);
         {
             let face_origin_idx = 0;
             for (const added_face of faces_to_add) {
-                const {face_definition, encoded_voxel_pos, mat_texture, mat_light, face_flipped} = added_face;
+                const {face_definition, encoded_voxel_pos, mat_texture, mat_light} = added_face;
                 face_definition.axis.appendQuadData(face_elements_buffer, face_origin_idx,
-                    encoded_voxel_pos, face_definition.axis_sign, face_flipped,
+                    encoded_voxel_pos, face_definition.axis_sign,
                     mat_texture, mat_light);
                 face_origin_idx += 12;
             }
         }
 
-        // Upload
+        // Upload data to buffer
         if (!face_set_manager.addElementsExternRefHandle(gl, face_elements_buffer, (face_idx, face_ref) => {
             faces.set(faces_to_add[face_idx].encoded_face_key, face_ref);
         })) {
