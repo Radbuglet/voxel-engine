@@ -24,13 +24,6 @@ export class GlSetBuffer {
     private elements_mirror: SetBufferElemInternal[] = [];
 
     /**
-     * @desc returns the number of members of the set. This is the number of words in the set, not the number of bytes.
-     */
-    get element_count() {
-        return this.elements_mirror.length;
-    }
-
-    /**
      * @desc Constructs a GlSetManager for a buffer. No buffer is explicitly passed but for all operations who have the
      * precondition that "the target buffer is bound to the ARRAY_BUFFER register", the buffer you decided to manage with
      * this class must be that "target buffer".
@@ -51,6 +44,29 @@ export class GlSetBuffer {
     ) {}
 
     /**
+     * @desc returns the number of members of the set. This is the number of words in the set, not the number of bytes.
+     */
+    get element_count() {
+        return this.elements_mirror.length;
+    }
+
+    /**
+     * @desc Prepares the buffer by initializing the buffer's capacity to the ideal capacity and constructs a new GlSetBuffer
+     * for the provided buffer. All arguments except "gl" are relayed to the constructor. See the constructor for more
+     * information on the requirements for the parameters.
+     * PRECONDITION: The target buffer (implied. No actual buffer is ever passed) must be bound to the ARRAY_BUFFER WebGL register.
+     */
+    static prepareBufferAndConstruct(gl: GlCtx, elem_word_size: number, get_ideal_capacity: IdealCapacityGetter) {
+        const initial_capacity = GlSetBuffer.getIdealCapacityBytes(elem_word_size, 0, get_ideal_capacity);
+        gl.bufferData(gl.ARRAY_BUFFER, initial_capacity, gl.DYNAMIC_DRAW);
+        return new GlSetBuffer(elem_word_size, initial_capacity, get_ideal_capacity);
+    }
+
+    private static getIdealCapacityBytes(elem_word_size: number, element_count: number, get_ideal_capacity: IdealCapacityGetter): number {
+        return elem_word_size * Math.floor(Math.max(element_count, get_ideal_capacity(element_count)));
+    }
+
+    /**
      * @desc Adds one or more elements to the set and returns their CPU mirrored references. The method will resize the buffer
      * if the buffer's capacity is too small to accommodate the new elements. Throughout the insertion, handle_new_ref() will
      * be called for every new element reference it generates. If the operation fails, false will be returned at the end but
@@ -66,7 +82,7 @@ export class GlSetBuffer {
      * its usage.
      */
     addElementsExternRefHandle(gl: GlCtx, elements_view: TypedArray, handle_new_ref: (idx_in_upload: number, elem_ref: SetBufferElem) => void): boolean {
-        const { elem_byte_size, elements_mirror } = this;
+        const {elem_byte_size, elements_mirror} = this;
         const insertion_root_idx = this.buffer_write_idx;
         console.assert(elements_view.byteLength % elem_byte_size == 0);
 
@@ -120,7 +136,7 @@ export class GlSetBuffer {
      * @param removed_element: The element to be removed.
      */
     removeElement(gl: GlCtx, removed_element: SetBufferElemInternal) {
-        const { elements_mirror, elem_byte_size } = this;
+        const {elements_mirror, elem_byte_size} = this;
         console.assert(removed_element.owner_set == this);
         const last_element_index = elements_mirror.length - 1;
         const last_element = elements_mirror[last_element_index];
@@ -165,7 +181,7 @@ export class GlSetBuffer {
      * state changes.
      */
     resizeCapacity(gl: GlCtx): boolean {
-        const { elem_byte_size, element_count } = this;
+        const {elem_byte_size, element_count} = this;
         // Figure out new buffer capacity size
         const new_capacity = GlSetBuffer.getIdealCapacityBytes(elem_byte_size, element_count, this.get_ideal_capacity);  // Capacity is in bytes, despite get_ideal_capacity returning words.
         if (new_capacity == this.buffer_capacity) return true;  // Nothing will change so we ignore this operation.
@@ -191,21 +207,5 @@ export class GlSetBuffer {
         } catch {
             return false;
         }
-    }
-
-    /**
-     * @desc Prepares the buffer by initializing the buffer's capacity to the ideal capacity and constructs a new GlSetBuffer
-     * for the provided buffer. All arguments except "gl" are relayed to the constructor. See the constructor for more
-     * information on the requirements for the parameters.
-     * PRECONDITION: The target buffer (implied. No actual buffer is ever passed) must be bound to the ARRAY_BUFFER WebGL register.
-     */
-    static prepareBufferAndConstruct(gl: GlCtx, elem_word_size: number, get_ideal_capacity: IdealCapacityGetter) {
-        const initial_capacity = GlSetBuffer.getIdealCapacityBytes(elem_word_size, 0, get_ideal_capacity);
-        gl.bufferData(gl.ARRAY_BUFFER, initial_capacity, gl.DYNAMIC_DRAW);
-        return new GlSetBuffer(elem_word_size, initial_capacity, get_ideal_capacity);
-    }
-
-    private static getIdealCapacityBytes(elem_word_size: number, element_count: number, get_ideal_capacity: IdealCapacityGetter): number {
-        return elem_word_size * Math.floor(Math.max(element_count, get_ideal_capacity(element_count)));
     }
 }

@@ -12,17 +12,17 @@ export interface IVoxelChunkHeadlessWrapper<TChunkWrapper extends IVoxelChunkHea
  * that voxel and its neighbors.
  */
 export class VoxelChunkData<TChunkWrapper extends IVoxelChunkHeadlessWrapper<TChunkWrapper, TVoxel>, TVoxel> {
-    constructor(public readonly wrapper: TChunkWrapper) {}
-
     /**
      * @desc Stores all voxels in the chunk. Uses encoded chunk positions.
      */
     public readonly voxels = new Map<number, TVoxel>();
-
     /**
      * @desc A map of neighboring chunks for use in ChunkVoxelPointers.
      */
     public readonly neighbors = new Map<FaceKey, TChunkWrapper>();
+
+    constructor(public readonly wrapper: TChunkWrapper) {
+    }
 
     /**
      * @desc Constructs a new voxel pointer for a voxel in this chunk.

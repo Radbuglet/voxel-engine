@@ -14,17 +14,6 @@ export class VoxelWorldData<TChunkWrapper extends IVoxelChunkHeadlessWrapper<TCh
         return pos[0] + "@" + pos[1] + "@" + pos[2];
     }
 
-    private processNeighbors(pos: vec3, handle_neighbor: (face: FaceDefinition, neighbor_chunk: TChunkWrapper) => void) {
-        const { chunks } = this;
-        const neighbor_lookup_vec = vec3.create();
-        for (const face of FACES_LIST) {
-            vec3.add(neighbor_lookup_vec, pos, face.vec_relative);
-            const neighbor_chunk = chunks.get(VoxelWorldData.encodeChunkPosition(neighbor_lookup_vec));
-            if (neighbor_chunk == null) continue;
-            handle_neighbor(face, neighbor_chunk);
-        }
-    }
-
     /**
      * @desc Provides an iterator for chunks in no specific order.
      */
@@ -38,7 +27,7 @@ export class VoxelWorldData<TChunkWrapper extends IVoxelChunkHeadlessWrapper<TCh
      * @param added_chunk: An instance of a chunk that isn't tracked by anything else.
      */
     putChunk(chunk_pos: vec3, added_chunk: TChunkWrapper): TChunkWrapper {
-        const { chunks } = this;
+        const {chunks} = this;
         const encoded_pos = VoxelWorldData.encodeChunkPosition(chunk_pos);
         console.assert(!chunks.has(encoded_pos));
         chunks.set(encoded_pos, added_chunk);
@@ -64,12 +53,23 @@ export class VoxelWorldData<TChunkWrapper extends IVoxelChunkHeadlessWrapper<TCh
      * @param chunk_pos: The chunk's position in chunk space (see above)
      */
     deleteChunk(chunk_pos: vec3) {
-        const { chunks } = this;
+        const {chunks} = this;
         const encoded_pos = VoxelWorldData.encodeChunkPosition(chunk_pos);
         console.assert(chunks.has(encoded_pos));
         chunks.delete(encoded_pos);
         this.processNeighbors(chunk_pos, (face, neighbor_chunk) => {
             neighbor_chunk.voxel_chunk_data.neighbors.delete(face.inverse_key);
         });
+    }
+
+    private processNeighbors(pos: vec3, handle_neighbor: (face: FaceDefinition, neighbor_chunk: TChunkWrapper) => void) {
+        const {chunks} = this;
+        const neighbor_lookup_vec = vec3.create();
+        for (const face of FACES_LIST) {
+            vec3.add(neighbor_lookup_vec, pos, face.vec_relative);
+            const neighbor_chunk = chunks.get(VoxelWorldData.encodeChunkPosition(neighbor_lookup_vec));
+            if (neighbor_chunk == null) continue;
+            handle_neighbor(face, neighbor_chunk);
+        }
     }
 }

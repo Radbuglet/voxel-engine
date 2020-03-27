@@ -2,10 +2,10 @@ import {GlSetBuffer, SetBufferElem} from "../helpers/memory/glSetBuffer";
 import {GlCtx, IntBool} from "../helpers/typescript/aliases";
 import {vec3} from "gl-matrix";
 import {FaceDefinition, FACES, FACES_LIST} from "../voxel-data/faces";
-import {VoxelChunkPointer, IVoxelChunkHeadlessWrapper} from "../voxel-data/voxelChunkData";
+import {IVoxelChunkHeadlessWrapper, VoxelChunkPointer} from "../voxel-data/voxelChunkData";
 
 export interface IVoxelMaterialProvider<TChunkWrapper extends IVoxelChunkHeadlessWrapper<TChunkWrapper, TVoxel>, TVoxel> {
-    parseMaterialOfVoxel(pointer: VoxelChunkPointer<TChunkWrapper, TVoxel>, face: FaceDefinition): { texture: number, light: number};
+    parseMaterialOfVoxel(pointer: VoxelChunkPointer<TChunkWrapper, TVoxel>, face: FaceDefinition): { texture: number, light: number };
 }
 
 export interface IVoxelChunkRendererWrapper {
@@ -25,6 +25,7 @@ type FaceToAdd = {
     mat_texture: number,
     mat_light: number
 };
+
 export class VoxelChunkRenderer {
     private readonly face_set_manager: GlSetBuffer;
     private readonly faces = new Map<number, SetBufferElem | null>();  // Key is an encoded face obtained from the face template. null represents a placeholder face that is about to be created on the GPU.
@@ -43,7 +44,7 @@ export class VoxelChunkRenderer {
     }
 
     handleModifiedVoxelPlacements<TChunkWrapper extends IVoxelChunkHeadlessWrapper<TChunkWrapper, TVoxel>, TVoxel>(gl: GlCtx, chunk: TChunkWrapper, modified_locations: Iterable<vec3>, material_provider: IVoxelMaterialProvider<TChunkWrapper, TVoxel>) {  // TODO: Add support for slabs.
-        const { face_set_manager, faces } = this;
+        const {face_set_manager, faces} = this;
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
 
         // Find faces to add; remove bad faces

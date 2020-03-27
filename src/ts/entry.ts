@@ -4,8 +4,13 @@ import {mat4, vec3} from "gl-matrix";
 import VOXEL_VERTEX_SOURCE from "./../res/voxel.vert";
 import VOXEL_FRAG_SOURCE from "./../res/voxel.frag";
 import {VoxelWorldData} from "./voxel-data/voxelWorldData";
-import {VoxelChunkPointer, IVoxelChunkHeadlessWrapper, VoxelChunkData} from "./voxel-data/voxelChunkData";
-import {IVoxelMaterialProvider, VoxelChunkRenderer, VoxelRenderingProgramSpecs} from "./voxel-render-core/voxelChunkRenderer";
+import {IVoxelChunkHeadlessWrapper, VoxelChunkData, VoxelChunkPointer} from "./voxel-data/voxelChunkData";
+import {
+    IVoxelChunkRendererWrapper,
+    IVoxelMaterialProvider,
+    VoxelChunkRenderer,
+    VoxelRenderingProgramSpecs
+} from "./voxel-render-core/voxelChunkRenderer";
 import {CHUNK_BLOCK_COUNT} from "./voxel-data/faces";
 import TEXTURES_IMAGE_PATH from "../res/textures.png";
 import {GlCtx} from "./helpers/typescript/aliases";
@@ -55,6 +60,7 @@ const material_provider: IVoxelMaterialProvider<TestChunk, number> = {
         };
     }
 };
+
 class TestWorld {
     private readonly voxel_data = new VoxelWorldData<TestChunk>();
 
@@ -71,19 +77,19 @@ class TestWorld {
     }
 }
 
-class TestChunk implements IVoxelChunkHeadlessWrapper<TestChunk, number> {
+class TestChunk implements IVoxelChunkHeadlessWrapper<TestChunk, number>, IVoxelChunkRendererWrapper {
     public readonly voxel_chunk_data: VoxelChunkData<TestChunk, number>;
-    public readonly voxel_renderer: VoxelChunkRenderer;
+    public readonly voxel_chunk_renderer: VoxelChunkRenderer;
     private readonly buffer: WebGLBuffer;
 
     constructor(gl: GlCtx, private readonly chunk_pos: vec3) {
         this.buffer = gl.createBuffer()!;
-        this.voxel_renderer = new VoxelChunkRenderer(gl, this.buffer);
+        this.voxel_chunk_renderer = new VoxelChunkRenderer(gl, this.buffer);
         this.voxel_chunk_data = new VoxelChunkData<TestChunk, number>(this);
     }
 
     mapVoxels(gl: GlCtx, get_desired_state: (pointer: VoxelChunkPointer<TestChunk, number>) => boolean) {
-        const { voxel_chunk_data } = this;
+        const {voxel_chunk_data} = this;
         const modified_positions: vec3[] = [];
         const voxel_write_pointer = voxel_chunk_data.getVoxelPointer([0, 0, 0]);
 
@@ -106,11 +112,11 @@ class TestChunk implements IVoxelChunkHeadlessWrapper<TestChunk, number> {
             }
         }
 
-        this.voxel_renderer.handleModifiedVoxelPlacements(gl, this, modified_positions, material_provider);
+        this.voxel_chunk_renderer.handleModifiedVoxelPlacements(gl, this, modified_positions, material_provider);
     }
 
     draw(gl: GlCtx, program_specs: VoxelRenderingProgramSpecs) {
-        this.voxel_renderer.draw(gl, program_specs, this.chunk_pos);
+        this.voxel_chunk_renderer.draw(gl, program_specs, this.chunk_pos);
     }
 }
 
@@ -180,6 +186,7 @@ const camera_ang = [0, 0];
 const keys_down: Record<string, true> = {};
 
 const chunk_pos_uniform = gl.getUniformLocation(render_program, "chunk_pos")!;
+
 function draw() {
     requestAnimationFrame(draw);
 
