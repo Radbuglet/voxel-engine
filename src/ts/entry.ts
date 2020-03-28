@@ -4,7 +4,7 @@ import {mat4, vec3} from "gl-matrix";
 import VOXEL_VERTEX_SOURCE from "./../res/voxel.vert";
 import VOXEL_FRAG_SOURCE from "./../res/voxel.frag";
 import {VoxelWorldData} from "./voxel-data/voxelWorldData";
-import {IVoxelChunkHeadlessWrapper, VoxelChunkData, VoxelChunkPointer} from "./voxel-data/voxelChunkData";
+import {IVoxelChunkDataWrapper, VoxelChunkData, VoxelChunkPointer} from "./voxel-data/voxelChunkData";
 import {
     IVoxelChunkRendererWrapper,
     IVoxelMaterialProvider,
@@ -78,7 +78,7 @@ class TestWorld {
     }
 }
 
-class TestChunk implements IVoxelChunkHeadlessWrapper<TestChunk, number>, IVoxelChunkRendererWrapper {
+class TestChunk implements IVoxelChunkDataWrapper<TestChunk, number>, IVoxelChunkRendererWrapper {
     public readonly voxel_chunk_data: VoxelChunkData<TestChunk, number>;
     public readonly voxel_chunk_renderer: VoxelChunkRenderer;
     private readonly buffer: WebGLBuffer;
@@ -126,7 +126,7 @@ for (let x = 0; x < 10; x++) {
     for (let y = 0; y < 10; y++) {
         for (let z = 0; z < 10; z++) {
             const chunk = world.addChunk(gl, [x, y, z]);
-            chunk.mapVoxels(gl, () => Math.random() > 0.5);
+            if (Math.random() > 0.5) chunk.mapVoxels(gl, () => Math.random() > 0.5);
         }
     }
 }

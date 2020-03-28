@@ -1,10 +1,10 @@
-import {GlSetBuffer, SetBufferElem} from "../helpers/memory/glSetBuffer";
+import {GpuSetBuffer, GpuSetElement} from "../helpers/memory/gpuSetBuffer";
 import {GlCtx, IntBool} from "../helpers/typescript/aliases";
 import {vec3} from "gl-matrix";
 import {FaceAxis, FaceDefinition, FACES, FACES_LIST} from "../voxel-data/faces";
-import {IVoxelChunkHeadlessWrapper, VoxelChunkPointer} from "../voxel-data/voxelChunkData";
+import {IVoxelChunkDataWrapper, VoxelChunkPointer} from "../voxel-data/voxelChunkData";
 
-export interface IVoxelMaterialProvider<TChunkWrapper extends IVoxelChunkHeadlessWrapper<TChunkWrapper, TVoxel>, TVoxel> {
+export interface IVoxelMaterialProvider<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkWrapper, TVoxel>, TVoxel> {
     parseMaterialOfVoxel(pointer: VoxelChunkPointer<TChunkWrapper, TVoxel>, face: FaceDefinition): { texture: number, light: number };
 }
 
@@ -17,7 +17,7 @@ export type VoxelRenderingProgramSpecs = {
     attrib_vertex_data: number
 };
 
-type CpuFaceMap = Map<number, SetBufferElem | null>;
+type CpuFaceMap = Map<number, GpuSetElement | null>;
 type FaceToAdd = {
     encoded_voxel_pos: number,
     encoded_face_key: number,
@@ -28,12 +28,12 @@ type FaceToAdd = {
 };
 
 export class VoxelChunkRenderer {
-    private readonly face_set_manager: GlSetBuffer;
+    private readonly face_set_manager: GpuSetBuffer;
     private readonly faces: CpuFaceMap = new Map();  // Key is an encoded face obtained from the face template. null represents a placeholder face that is about to be created on the GPU.
 
     constructor(gl: GlCtx, private readonly buffer: WebGLBuffer) {
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-        this.face_set_manager = GlSetBuffer.prepareBufferAndConstruct(
+        this.face_set_manager = GpuSetBuffer.prepareBufferAndConstruct(
             gl, 24, required_capacity => required_capacity * 1.5 + 6 * 10);
     }
 
@@ -68,25 +68,25 @@ export class VoxelChunkRenderer {
         }
     }
 
-    handleModifiedVoxelPlacements<TChunkWrapper extends IVoxelChunkHeadlessWrapper<TChunkWrapper, TVoxel> & IVoxelChunkRendererWrapper, TVoxel>(gl: GlCtx, chunk: TChunkWrapper, modified_locations: Iterable<vec3>, material_provider: IVoxelMaterialProvider<TChunkWrapper, TVoxel>) {  // TODO: Add support for slabs.
+    handleModifiedVoxelPlacements<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkWrapper, TVoxel> & IVoxelChunkRendererWrapper, TVoxel>(gl: GlCtx, chunk: TChunkWrapper, modified_locations: Iterable<vec3>, material_provider: IVoxelMaterialProvider<TChunkWrapper, TVoxel>) {  // TODO: Add support for slabs.
         const {face_set_manager, faces} = this;
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
 
         // Find faces to add; remove bad faces
         const chunk_data = chunk.voxel_chunk_data;
         const neighbor_chunk_modifications = new Map<VoxelChunkRenderer, {
-            faces_to_delete: SetBufferElem[],
+            faces_to_delete: GpuSetElement[],
             faces_to_add: FaceToAdd[]
         }>();
         const faces_to_add: FaceToAdd[] = [];
         {
             // Utils
-            function addFace(modifications_array: FaceToAdd[], face_map: CpuFaceMap, owner_pointer: VoxelChunkPointer<TChunkWrapper, TVoxel>, face: FaceDefinition) {
+            function addFace(added_faces_array: FaceToAdd[], face_map: CpuFaceMap, owner_pointer: VoxelChunkPointer<TChunkWrapper, TVoxel>, face: FaceDefinition) {
                 const material = material_provider.parseMaterialOfVoxel(owner_pointer, face);
                 const encoded_face_key = face.axis.encodeFaceKey(owner_pointer.encoded_pos, face.axis_sign);
                 if (!face_map.has(encoded_face_key)) {  // Prevent double face creation if neighbor destruction and voxel empty face creation in same batch try to make the same face.
                     face_map.set(encoded_face_key, null);  // Put a placeholder.
-                    modifications_array.push({
+                    added_faces_array.push({
                         encoded_voxel_pos: owner_pointer.encoded_pos,
                         encoded_face_key,
                         face_definition: face,
@@ -96,7 +96,7 @@ export class VoxelChunkRenderer {
                 }
             }
 
-            function deleteFace(face_map: CpuFaceMap, owner_pointer: VoxelChunkPointer<TChunkWrapper, TVoxel>, face: FaceDefinition): SetBufferElem | null | undefined {
+            function deleteFace(face_map: CpuFaceMap, owner_pointer: VoxelChunkPointer<TChunkWrapper, TVoxel>, face: FaceDefinition): GpuSetElement | null | undefined {
                 const encoded_face_key = face.axis.encodeFaceKey(owner_pointer.encoded_pos, face.axis_sign);
                 const face_mirror = face_map.get(encoded_face_key);
                 if (face_mirror != null) {  // undefined => no face ie deleted, null face => face is placeholder (shouldn't happen, more for type safety)

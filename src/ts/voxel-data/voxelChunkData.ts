@@ -2,7 +2,7 @@ import {vec3} from "gl-matrix";
 import {CHUNK_BLOCK_COUNT, encodeChunkPos, FaceDefinition, FaceKey} from "./faces";
 import {signedModulo} from "../helpers/scalar";
 
-export interface IVoxelChunkHeadlessWrapper<TChunkWrapper extends IVoxelChunkHeadlessWrapper<TChunkWrapper, TVoxel>, TVoxel> {
+export interface IVoxelChunkDataWrapper<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkWrapper, TVoxel>, TVoxel> {
     voxel_chunk_data: VoxelChunkData<TChunkWrapper, TVoxel>;
 }
 
@@ -11,7 +11,7 @@ export interface IVoxelChunkHeadlessWrapper<TChunkWrapper extends IVoxelChunkHea
  * Voxel data can be anything. Provides ability to procure voxel pointers for voxels inside this chunk for reading data about
  * that voxel and its neighbors.
  */
-export class VoxelChunkData<TChunkWrapper extends IVoxelChunkHeadlessWrapper<TChunkWrapper, TVoxel>, TVoxel> {
+export class VoxelChunkData<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkWrapper, TVoxel>, TVoxel> {
     /**
      * @desc Stores all voxels in the chunk. Uses encoded chunk positions.
      */
@@ -21,8 +21,7 @@ export class VoxelChunkData<TChunkWrapper extends IVoxelChunkHeadlessWrapper<TCh
      */
     public readonly neighbors = new Map<FaceKey, TChunkWrapper>();
 
-    constructor(public readonly wrapper: TChunkWrapper) {
-    }
+    constructor(public readonly wrapper: TChunkWrapper) {}
 
     /**
      * @desc Constructs a new voxel pointer for a voxel in this chunk.
@@ -38,7 +37,7 @@ export class VoxelChunkData<TChunkWrapper extends IVoxelChunkHeadlessWrapper<TCh
  * @desc Points towards a voxel in a chunk. All actions performed by this vector only happen on the voxel data object and
  * nothing else gets updated automatically.
  */
-export class VoxelChunkPointer<TChunkWrapper extends IVoxelChunkHeadlessWrapper<TChunkWrapper, TVoxel>, TVoxel> {
+export class VoxelChunkPointer<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkWrapper, TVoxel>, TVoxel> {
     constructor(public readonly chunk_wrapped: TChunkWrapper, public pos: vec3, public encoded_pos: number) {
         this.encoded_pos = encodeChunkPos(pos);
     }

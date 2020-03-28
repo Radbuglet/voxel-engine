@@ -4,14 +4,14 @@ import {readTypedArrayBytes} from "./typedArrays";
 
 type IdealCapacityGetter = (required_capacity: number) => number;
 type SetBufferElemInternal = {
-    owner_set?: GlSetBuffer,
+    owner_set?: GpuSetBuffer,
     cpu_index: number,
     gpu_root_idx: number,
     subarray_buffer: TypedArray
 };
-export type SetBufferElem = Readonly<SetBufferElemInternal>;
+export type GpuSetElement = Readonly<SetBufferElemInternal>;
 
-export class GlSetBuffer {
+export class GpuSetBuffer {
     /**
      * @desc represents the number of bytes in the array. Also serves as the index to the root of any concat operation.
      * storage_write_idx and stored_data update in tandem.
@@ -57,9 +57,9 @@ export class GlSetBuffer {
      * PRECONDITION: The target buffer (implied. No actual buffer is ever passed) must be bound to the ARRAY_BUFFER WebGL register.
      */
     static prepareBufferAndConstruct(gl: GlCtx, elem_word_size: number, get_ideal_capacity: IdealCapacityGetter) {
-        const initial_capacity = GlSetBuffer.getIdealCapacityBytes(elem_word_size, 0, get_ideal_capacity);
+        const initial_capacity = GpuSetBuffer.getIdealCapacityBytes(elem_word_size, 0, get_ideal_capacity);
         gl.bufferData(gl.ARRAY_BUFFER, initial_capacity, gl.DYNAMIC_DRAW);
-        return new GlSetBuffer(elem_word_size, initial_capacity, get_ideal_capacity);
+        return new GpuSetBuffer(elem_word_size, initial_capacity, get_ideal_capacity);
     }
 
     private static getIdealCapacityBytes(elem_word_size: number, element_count: number, get_ideal_capacity: IdealCapacityGetter): number {
@@ -81,7 +81,7 @@ export class GlSetBuffer {
      * @param handle_new_ref: A method called during the insertion of the elements. See description for warnings about
      * its usage.
      */
-    addElementsExternRefHandle(gl: GlCtx, elements_view: TypedArray, handle_new_ref: (idx_in_upload: number, elem_ref: SetBufferElem) => void): boolean {
+    addElementsExternRefHandle(gl: GlCtx, elements_view: TypedArray, handle_new_ref: (idx_in_upload: number, elem_ref: GpuSetElement) => void): boolean {
         const {elem_byte_size, elements_mirror} = this;
         const insertion_root_idx = this.buffer_write_idx;
         console.assert(elements_view.byteLength % elem_byte_size == 0);
@@ -119,7 +119,7 @@ export class GlSetBuffer {
      * Same restrictions, preconditions and warnings apply.
      */
     addElements(gl: GlCtx, elements_view: TypedArray) {
-        const elements: SetBufferElem[] = new Array(elements_view.byteLength / this.elem_byte_size);
+        const elements: GpuSetElement[] = new Array(elements_view.byteLength / this.elem_byte_size);
         if (this.addElementsExternRefHandle(gl, elements_view, (idx, ref) => {
             elements[idx] = ref;
         })) {
@@ -183,7 +183,7 @@ export class GlSetBuffer {
     resizeCapacity(gl: GlCtx): boolean {
         const {elem_byte_size, element_count} = this;
         // Figure out new buffer capacity size
-        const new_capacity = GlSetBuffer.getIdealCapacityBytes(elem_byte_size, element_count, this.get_ideal_capacity);  // Capacity is in bytes, despite get_ideal_capacity returning words.
+        const new_capacity = GpuSetBuffer.getIdealCapacityBytes(elem_byte_size, element_count, this.get_ideal_capacity);  // Capacity is in bytes, despite get_ideal_capacity returning words.
         if (new_capacity == this.buffer_capacity) return true;  // Nothing will change so we ignore this operation.
 
         // Generate data buffer to upload
