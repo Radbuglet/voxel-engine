@@ -14,6 +14,7 @@ import {
 import {CHUNK_BLOCK_COUNT} from "./voxel-data/faces";
 import TEXTURES_IMAGE_PATH from "../res/textures.png";
 import {GlCtx} from "./helpers/typescript/aliases";
+import {signedModulo} from "./helpers/scalar";
 
 const canvas = document.createElement("canvas");
 const gl = canvas.getContext("webgl")!;
@@ -122,7 +123,7 @@ class TestChunk implements IVoxelChunkHeadlessWrapper<TestChunk, number>, IVoxel
 
 const world = new TestWorld();
 const chunk = world.addChunk(gl, [0, 0, 0]);
-chunk.mapVoxels(gl, ptr => true);
+chunk.mapVoxels(gl, ptr => false);
 
 const chunk2 = world.addChunk(gl, [1, 0, 0]);
 chunk2.mapVoxels(gl, ptr => Math.random() > ptr.pos[0] / CHUNK_BLOCK_COUNT);
@@ -198,6 +199,8 @@ function draw() {
     if (keys_down["ArrowRight"]) {
         camera_ang[0] -= Math.PI * 0.02;
     }
+
+    camera_ang[0] = signedModulo(camera_ang[0], Math.PI * 2);
 
     if (keys_down["ArrowUp"]) {
         camera_ang[1] += Math.PI * 0.02;
