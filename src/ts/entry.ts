@@ -122,14 +122,14 @@ class TestChunk implements IVoxelChunkHeadlessWrapper<TestChunk, number>, IVoxel
 }
 
 const world = new TestWorld();
-const chunk = world.addChunk(gl, [0, 0, 0]);
-chunk.mapVoxels(gl, ptr => false);
-
-const chunk2 = world.addChunk(gl, [1, 0, 0]);
-chunk2.mapVoxels(gl, ptr => Math.random() > ptr.pos[0] / CHUNK_BLOCK_COUNT);
-(window as any).gl = gl;
-(window as any).chunk = chunk;
-(window as any).chunk2 = chunk2;
+for (let x = 0; x < 10; x++) {
+    for (let y = 0; y < 10; y++) {
+        for (let z = 0; z < 10; z++) {
+            const chunk = world.addChunk(gl, [x, y, z]);
+            chunk.mapVoxels(gl, () => Math.random() > 0.5);
+        }
+    }
+}
 
 // Setup textures
 const my_texture = gl.createTexture()!;
