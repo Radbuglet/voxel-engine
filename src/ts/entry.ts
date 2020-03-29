@@ -63,7 +63,7 @@ const material_provider: IVoxelMaterialProvider<TestChunk, number> = {
 };
 
 class TestWorld {
-    private readonly voxel_data = new VoxelWorldData<TestChunk>();
+    private readonly voxel_data = new VoxelWorldData<TestChunk, number>();
 
     addChunk(gl: GlCtx, chunk_pos: vec3) {
         const chunk = new TestChunk(gl, chunk_pos);
