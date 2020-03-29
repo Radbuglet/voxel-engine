@@ -68,7 +68,7 @@ export class VoxelChunkRenderer {
         }
     }
 
-    handleModifiedVoxelPlacements<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkWrapper, TVoxel> & IVoxelChunkRendererWrapper, TVoxel>(gl: GlCtx, chunk: TChunkWrapper, modified_locations: Iterable<vec3>, material_provider: IVoxelMaterialProvider<TChunkWrapper, TVoxel>) {  // TODO: Add support for slabs.
+    handleVoxelModifications<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkWrapper, TVoxel> & IVoxelChunkRendererWrapper, TVoxel>(gl: GlCtx, chunk: TChunkWrapper, modified_locations: Iterable<vec3>, material_provider: IVoxelMaterialProvider<TChunkWrapper, TVoxel>) {  // TODO: Add support for slabs.
         const {face_set_manager, faces} = this;
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
 
@@ -173,7 +173,23 @@ export class VoxelChunkRenderer {
         }
     }
 
-    handleModifiedVoxelMaterials() {
-        // TODO
+    reShadeVoxel<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkWrapper, TVoxel> & IVoxelChunkRendererWrapper, TVoxel>(gl: GlCtx, target_voxel_ptr: VoxelChunkPointer<TChunkWrapper, TVoxel>, voxel_face: FaceDefinition, material_provider: IVoxelMaterialProvider<TChunkWrapper, TVoxel>) {
+        const { encoded_pos: target_voxel_pos } = target_voxel_ptr;
+        const { axis, axis_sign } = voxel_face;
+        // Get target face
+        const encoded_face_key = axis.encodeFaceKey(target_voxel_pos, axis_sign);
+        const face_to_be_modified = this.faces.get(encoded_face_key);
+        console.assert(face_to_be_modified != null);
+
+        // Re-encode data
+        const new_face_data = new Uint16Array(12);
+        const { texture , light} = material_provider.parseMaterialOfVoxel(target_voxel_ptr, voxel_face);
+        voxel_face.axis.appendQuadData(new_face_data, 0,
+            target_voxel_pos, axis_sign,
+            texture, light);
+
+        // Upload to buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
+        this.face_set_manager.setElement(gl, face_to_be_modified!, new_face_data);
     }
 }

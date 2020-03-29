@@ -113,7 +113,7 @@ class TestChunk implements IVoxelChunkDataWrapper<TestChunk, number>, IVoxelChun
             }
         }
 
-        this.voxel_chunk_renderer.handleModifiedVoxelPlacements(gl, this, modified_positions, material_provider);
+        this.voxel_chunk_renderer.handleVoxelModifications(gl, this, modified_positions, material_provider);
     }
 
     draw(gl: GlCtx, program_specs: VoxelRenderingProgramSpecs) {
