@@ -1,8 +1,9 @@
 import {GpuSetBuffer, GpuSetElement} from "../helpers/memory/gpuSetBuffer";
-import {GlCtx, IntBool} from "../helpers/typescript/aliases";
+import {GlCtx} from "../helpers/typescript/aliases";
 import {vec3} from "gl-matrix";
-import {FaceAxis, FaceDefinition, FACES, FACES_LIST} from "../voxel-data/faces";
+import {FaceDefinition, FACES, FACES_LIST} from "../voxel-data/faces";
 import {IVoxelChunkDataWrapper, VoxelChunkPointer} from "../voxel-data/voxelChunkData";
+import {VoxelRenderingShader} from "./defaultShaders";
 
 export interface IVoxelMaterialProvider<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkWrapper, TVoxel>, TVoxel> {
     parseMaterialOfVoxel(pointer: VoxelChunkPointer<TChunkWrapper, TVoxel>, face: FaceDefinition): { texture: number, light: number };
@@ -11,11 +12,6 @@ export interface IVoxelMaterialProvider<TChunkWrapper extends IVoxelChunkDataWra
 export interface IVoxelChunkRendererWrapper {
     voxel_chunk_renderer: VoxelChunkRenderer
 }
-
-export type VoxelRenderingProgramSpecs = {
-    uniform_chunk_pos: WebGLUniformLocation,
-    attrib_vertex_data: number
-};
 
 type CpuFaceMap = Map<number, GpuSetElement | null>;
 type FaceToAdd = {
@@ -27,20 +23,37 @@ type FaceToAdd = {
     mat_light: number
 };
 
+/**
+ * @desc Renders the voxel data
+ */
 export class VoxelChunkRenderer {
     private readonly face_set_manager: GpuSetBuffer;
     private readonly faces: CpuFaceMap = new Map();  // Key is an encoded face obtained from the face template. null represents a placeholder face that is about to be created on the GPU.
 
+    /**
+     * @desc Constructs a voxel chunk renderer using a pre-allocated buffer.
+     * NOTE: The initial state of the mesh will be of an empty chunk. If chunk data manipulations happened before a renderer
+     * was constructed, you can use the handleVoxelModifications() method, treating all extant voxels as newly placed voxels.
+     * @param gl: The WebGl context.
+     * @param buffer: An empty buffer that is hereby controlled solely by this manager.
+     */
     constructor(gl: GlCtx, private readonly buffer: WebGLBuffer) {
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         this.face_set_manager = GpuSetBuffer.prepareBufferAndConstruct(
             gl, 24, required_capacity => required_capacity * 1.5 + 6 * 10);
     }
 
-    draw(gl: GlCtx, program_specs: VoxelRenderingProgramSpecs, chunk_pos: vec3) {
+    /**
+     * @desc Draws the chunk.
+     * @param gl: The WebGl context.
+     * @param program: The program location configuration for the rendering.
+     * NOTE: This program must be activated before calling this method.
+     * @param chunk_pos: The position of the chunk in chunk world space.
+     */
+    draw(gl: GlCtx, program: VoxelRenderingShader, chunk_pos: vec3) {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
-        gl.uniform3fv(program_specs.uniform_chunk_pos, chunk_pos);
-        gl.vertexAttribPointer(program_specs.attrib_vertex_data, 2, gl.UNSIGNED_SHORT, false, 0, 0);
+        gl.uniform3fv(program.uniform_chunk_pos, chunk_pos);
+        gl.vertexAttribPointer(program.attrib_vertex_data, 2, gl.UNSIGNED_SHORT, false, 0, 0);
         gl.drawArrays(gl.TRIANGLES, 0, this.face_set_manager.element_count * 6);  // There are 6 vertices per face. Draw uses vertex count. Therefore, we multiply by 6.
     }
 
@@ -68,6 +81,18 @@ export class VoxelChunkRenderer {
         }
     }
 
+    /**
+     * @desc Handles a batch block existence modifications. May only be called for mesh updates (eg block placement and block destruction),
+     * not material updates (eg lighting updates). It is best to condense as many block updates into one batch as GPUs prefer,
+     * a lot of data in one batch instead of a bit of data in many batches.
+     * Treats the presence of a voxel, regardless of the data contents, as a full voxel.  TODO: Remove this limitation
+     * NOTE: Must be called after the chunk data is modified to reflect all the changes.
+     * @param gl: The WebGl context
+     * @param chunk: This chunk renderer's wrapper. The wrapper must provide a chunk data provider and a chunk rendering provider.
+     * @param modified_locations: A list of voxel locations in chunk relative space which have been modified.
+     * If the voxel place state was not modified, DO NOT include it in the list. See desc for details.
+     * @param material_provider: The material provider used to shade the voxels.
+     */
     handleVoxelModifications<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkWrapper, TVoxel> & IVoxelChunkRendererWrapper, TVoxel>(gl: GlCtx, chunk: TChunkWrapper, modified_locations: Iterable<vec3>, material_provider: IVoxelMaterialProvider<TChunkWrapper, TVoxel>) {  // TODO: Add support for slabs.
         const {face_set_manager, faces} = this;
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
@@ -173,13 +198,21 @@ export class VoxelChunkRenderer {
         }
     }
 
-    reShadeVoxel<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkWrapper, TVoxel> & IVoxelChunkRendererWrapper, TVoxel>(gl: GlCtx, target_voxel_ptr: VoxelChunkPointer<TChunkWrapper, TVoxel>, voxel_face: FaceDefinition, material_provider: IVoxelMaterialProvider<TChunkWrapper, TVoxel>) {
+    /**
+     * @desc Tries to re-shade a voxel's face. A boolean is returned depending on whether or not the face exists.
+     * NOTE: This method expects this chunk's buffer to already be bound to the ARRAY_BUFFER.
+     * @param gl: The WebGl context
+     * @param target_voxel_ptr: A pointer to the voxel. This voxel must be in the chunk the renderer is tasked with managing.
+     * @param voxel_face: The face on that voxel which you wish to update.
+     * @param material_provider: The material provider for the update.
+     */
+    reShadeFace<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkWrapper, TVoxel> & IVoxelChunkRendererWrapper, TVoxel>(gl: GlCtx, target_voxel_ptr: VoxelChunkPointer<TChunkWrapper, TVoxel>, voxel_face: FaceDefinition, material_provider: IVoxelMaterialProvider<TChunkWrapper, TVoxel>): boolean {
         const { encoded_pos: target_voxel_pos } = target_voxel_ptr;
         const { axis, axis_sign } = voxel_face;
         // Get target face
         const encoded_face_key = axis.encodeFaceKey(target_voxel_pos, axis_sign);
         const face_to_be_modified = this.faces.get(encoded_face_key);
-        console.assert(face_to_be_modified != null);
+        if (face_to_be_modified == null) return false;
 
         // Re-encode data
         const new_face_data = new Uint16Array(12);
@@ -191,5 +224,6 @@ export class VoxelChunkRenderer {
         // Upload to buffer
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
         this.face_set_manager.setElement(gl, face_to_be_modified!, new_face_data);
+        return true;
     }
 }
