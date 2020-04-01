@@ -5,3 +5,4 @@ TODO: Document remaining classes
 TODO: Add assertions to prevent stupid bugs.
 TODO: Remake face system so it's more extendable
 TODO: Clean up internal comments
+TODO: Tests!
