@@ -3,7 +3,7 @@
   "description": "A voxel engine for WebGL",
   "version": "1.0.0",
   "scripts": {
-    "dev": "parcel dev src/index.html"
+    "dev": "parcel dev examples/index.html"
   },
   "dependencies": {},
   "devDependencies": {

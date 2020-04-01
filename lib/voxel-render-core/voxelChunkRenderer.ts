@@ -50,7 +50,7 @@ export class VoxelChunkRenderer {
      * NOTE: This program must be activated before calling this method.
      * @param chunk_pos: The position of the chunk in chunk world space.
      */
-    draw(gl: GlCtx, program: VoxelRenderingShader, chunk_pos: vec3) {
+    render(gl: GlCtx, program: VoxelRenderingShader, chunk_pos: vec3) {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
         gl.uniform3fv(program.uniform_chunk_pos, chunk_pos);
         gl.vertexAttribPointer(program.attrib_vertex_data, 2, gl.UNSIGNED_SHORT, false, 0, 0);
