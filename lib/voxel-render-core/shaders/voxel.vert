@@ -7,11 +7,6 @@ const float VOXEL_WORLD_SIZE = 1.0;
 const float TEXTURE_FRAMES_CX = 2.0;
 const float TEXTURE_FRAMES_CY = 2.0;
 
-#pragma glsift: export(CHUNK_SIZE)
-#pragma glsift: export(VOXEL_WORLD_SIZE)
-#pragma glsift: export(TEXTURE_FRAMES_CX)
-#pragma glsift: export(TEXTURE_FRAMES_CY)
-
 // Uniforms
 uniform vec3 chunk_pos;
 uniform mat4 projection;
