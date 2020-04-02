@@ -8,5 +8,3 @@ export type RecordKeys = keyof any;
 export type RecordV<V> = Record<RecordKeys, V>;
 export type PartialRecord<K extends RecordKeys, V> = Partial<Record<K, V>>;
 export type IntBool = 0 | 1;
-
-export type ObjOrFailure<T> = { type: "success", obj: T } | { type: "error", message: string };

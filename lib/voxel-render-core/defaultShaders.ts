@@ -1,7 +1,8 @@
 import VOXEL_VERTEX_SOURCE from "./shaders/voxel.vert";
 import VOXEL_FRAG_SOURCE from "./shaders/voxel.frag";
-import {GlCtx, ObjOrFailure} from "../helpers/typescript/aliases";
+import {GlCtx} from "../helpers/typescript/aliases";
 import {GL_UTILS} from "../helpers/gl/shaderLoading";
+import {OptionalReasoned} from "../helpers/typescript/optionalReasoned";
 
 export type VoxelRenderingShader = {
     program: WebGLProgram,
@@ -12,12 +13,24 @@ export type VoxelRenderingShader = {
 };
 
 export const VOXEL_RENDERING_SHADER = {
+    /**
+     * @desc The sources for the default voxel rendering shaders
+     */
     source: {
         VERTEX: VOXEL_VERTEX_SOURCE,
         FRAGMENT: VOXEL_FRAG_SOURCE
     },
+
+    /**
+     * @desc Wraps an already loaded shader program in a VoxelRenderingShader data structure for use by default voxel
+     * rendering logic. Finds locations of all attributes and uniforms assuming the types and names of the defaults
+     * don't change.
+     * @param gl: The WebGL context
+     * @param program: The program to be wrapped. Must have attribute and uniform names comply with those of the default
+     * shader. Fails silently otherwise.
+     */
     wrapLoadedVoxelProgram(gl: GlCtx, program: WebGLProgram): VoxelRenderingShader {
-        return {  // TODO: Error handling using assertions
+        return {
             program,
             uniform_view_mat: gl.getUniformLocation(program, "view")!,
             uniform_projection_mat: gl.getUniformLocation(program, "projection")!,
@@ -25,13 +38,16 @@ export const VOXEL_RENDERING_SHADER = {
             attrib_vertex_data: gl.getAttribLocation(program, "vertex_data")
         }
     },
-    loadDefaultVoxelShader(gl: GlCtx): ObjOrFailure<VoxelRenderingShader> {
+
+    /**
+     * @desc Loads the default shaders from VOXEL_RENDERING_SHADER.source and wraps it.
+     * @param gl: The WebGl context
+     * @returns An optional with either the wrapped program or a failure state.
+     */
+    loadDefaultVoxelShader(gl: GlCtx): OptionalReasoned<VoxelRenderingShader> {
         const {VERTEX, FRAGMENT} = this.source;
         const program_optional = GL_UTILS.loadProgram(gl, VERTEX, FRAGMENT);
-        if (program_optional.type == "error") return program_optional;
-        return {
-            type: "success",
-            obj: this.wrapLoadedVoxelProgram(gl, program_optional.obj)
-        };
+        if (!OptionalReasoned.isPresent(program_optional.raw)) return program_optional as any;
+        return OptionalReasoned.success(this.wrapLoadedVoxelProgram(gl, program_optional.raw.obj));
     }
 };

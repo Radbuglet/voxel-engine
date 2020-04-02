@@ -18,12 +18,8 @@ document.body.append(canvas);
 const gl = canvas.getContext("webgl")!;
 
 // Create shading stuff
-let voxel_shader: VoxelRenderingShader;
-{
-    const voxel_shader_optional = VOXEL_RENDERING_SHADER.loadDefaultVoxelShader(gl);
-    if (voxel_shader_optional.type == "error") throw voxel_shader_optional.message;
-    voxel_shader = voxel_shader_optional.obj;
-}
+const voxel_shader = VOXEL_RENDERING_SHADER.loadDefaultVoxelShader(gl).getOrThrow();
+gl.useProgram(voxel_shader.program);
 
 const material_provider: IVoxelMaterialProvider<ExampleChunk, number> = {
     parseMaterialOfVoxel(pointer, face) {
@@ -33,6 +29,9 @@ const material_provider: IVoxelMaterialProvider<ExampleChunk, number> = {
         };
     }
 };
+
+// Load textures
+// TODO
 
 // Define world
 class ExampleWorld {
@@ -46,7 +45,7 @@ class ExampleWorld {
             aspect: canvas.width / canvas.height,
             fov_rad: Math.PI * 0.7
         }, {
-            origin: [0, 0, -3],
+            origin: [0.5, 0.5, 4],
             pitch: 0,
             yaw: 0
         })
@@ -66,11 +65,11 @@ class ExampleWorld {
     }
 
     render(gl: GlCtx) {
-        // Update
+        // Update  TODO: Freecam
 
         // Render
         gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
-        gl.clearColor(0.2, 0.2, 0.2, 1);
+        gl.clearColor(0.9, 0.9, 0.95, 1);
         gl.enableVertexAttribArray(voxel_shader.attrib_vertex_data);
         this.voxel_world_renderer.render<ExampleChunk>(ExampleWorld.getChunkRenderCtx(gl),
             this.voxel_world_data.iterChunks(), chunk => chunk.pos);
@@ -85,19 +84,31 @@ class ExampleChunk implements IVoxelChunkDataWrapper<ExampleChunk, number>, IVox
     constructor(gl: GlCtx, public readonly pos: vec3) {
         this.voxel_chunk_renderer = new VoxelChunkRenderer(gl, gl.createBuffer()!);
     }
+
+    placeVoxels(gl: GlCtx, positions: vec3[]) {
+        const {voxel_chunk_data, voxel_chunk_renderer} = this;
+        const write_pointer = voxel_chunk_data.getVoxelPointer([0, 0, 0]);
+        for (const pos of positions) {
+            write_pointer.moveTo(pos);
+            write_pointer.setData(1);
+        }
+        voxel_chunk_renderer.handleVoxelModifications(gl, this, positions, material_provider);
+    }
 }
 
 // Prepare world
 const world = new ExampleWorld(gl);
 const chunk = world.makeChunk(gl, [0, 0, 0]);
 chunk.voxel_chunk_data.getVoxelPointer([0, 0, 0]).setData(0);
-chunk.voxel_chunk_renderer.handleVoxelModifications(gl, chunk, [
-    [0, 0, 0]
-], material_provider);
+chunk.placeVoxels(gl, [
+    [0, 0, 0],
+    [0, 1, 0],
+    [1, 1, 0]
+]);
 
 // Run game
-function tick(time: number) {
+function tick() {
     requestAnimationFrame(tick);
-    console.log(time);
     world.render(gl);
 }
+tick();

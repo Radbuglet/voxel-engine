@@ -93,7 +93,7 @@ export class VoxelChunkRenderer {
      * If the voxel place state was not modified, DO NOT include it in the list. See desc for details.
      * @param material_provider: The material provider used to shade the voxels.
      */
-    handleVoxelModifications<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkWrapper, TVoxel> & IVoxelChunkRendererWrapper, TVoxel>(gl: GlCtx, chunk: TChunkWrapper, modified_locations: Iterable<vec3>, material_provider: IVoxelMaterialProvider<TChunkWrapper, TVoxel>) {  // TODO: Add support for slabs.
+    handleVoxelModifications<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkWrapper, TVoxel> & IVoxelChunkRendererWrapper, TVoxel>(gl: GlCtx, chunk: TChunkWrapper, modified_locations: Iterable<vec3>, material_provider: IVoxelMaterialProvider<TChunkWrapper, TVoxel>) {  // TODO: Add support for slabs and multiple passes.
         const {face_set_manager, faces} = this;
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
 
