@@ -18,3 +18,13 @@ export function limitPrecision(val: number, divisor: number) {
 export function signedModulo(val: number, operand: number) {
     return val - limitPrecision(val, operand);
 }
+
+/**
+ * @desc Clamps a scalar in the range: min <= val <= max.
+ * @param val: The value to be clamped
+ * @param min: The min (inclusive) of the clamp.
+ * @param max: The max (inclusive) of the clamp.
+ */
+export function clamp(val: number, min: number, max: number) {
+    return Math.min(Math.max(val, min), max);
+}

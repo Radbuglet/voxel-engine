@@ -25,7 +25,7 @@ export function makeNumberEncoder(dimension_sizes: number[]) {
         let final_val = 0;
         console.assert(values_offset + values.length <= dimension_sizes.length);
         for (let idx = 0; idx < values.length; idx++) {
-            final_val += values[idx] * dimension_sizes[idx + values_offset];  // In this context, dimension_sizes means the dimension multiplier because
+            final_val += values[idx] * dimension_sizes[idx + values_offset];  // In this context, dimension_sizes means the dimension multiplier because we reused the array passed to us.
         }
         return final_val;
     }

@@ -10,11 +10,12 @@ export interface IRenderBucket<TContext, TTarget> {
 }
 
 /**
- * @desc Provides a simple system for rendering entities in batches.
+ * @desc Provides a simple system for rendering entities in batches (what this utility calls batches).
  * Batches are determined by a "rendering bucket" which defines the startup, render, and cleanup logic for rendering a
  * group of entities.
- * A bucket could be used for each type of entity or a bucket could be shared if multiple entities use the same shader.
- * Entity buckets and the entities they contain are rendered in an arbitrary order.
+ * A bucket could be used for each type of entity or a bucket could be shared if multiple entities have shared WebGl
+ * state that doesn't need to be modified.
+ * NOTE: Entity buckets and the entities they contain are rendered in an arbitrary order.
  */
 export class VoxelEntityRenderer<TContext> {
     private readonly entity_buckets = new Map<IRenderBucket<TContext, any>, Set<any>>();
@@ -41,7 +42,7 @@ export class VoxelEntityRenderer<TContext> {
         }
     }
 
-    clearEntities() {
+    clearAllBuckets() {
         this.entity_buckets.clear();
     }
 

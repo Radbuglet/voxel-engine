@@ -19,11 +19,23 @@ type ViewState = {
     yaw: number
 };
 export class VoxelChunkWorldRendering {
+    /**
+     * @desc Creates a new chunk world renderer. The initial CPU mirrored state is automatically uploaded to the shader's
+     * uniforms.
+     * NOTE: This utility requires that the voxel rendering shader be the actively bound program on the context.
+     * @param ctx
+     * @param proj_state
+     * @param view_state
+     */
     constructor(ctx: WorldChunksRenderingContext, public proj_state: ProjState, public view_state: ViewState) {
         this.updatePerspectiveOnGpu(ctx);
         this.updateViewOnGpu(ctx);
     }
 
+    /**
+     * @desc Updates the uniforms on the voxel rendering shader to match the active projection state.
+     * NOTE: This utility requires that the voxel rendering shader be the actively bound program on the context.
+     */
     updatePerspectiveOnGpu(ctx: WorldChunksRenderingContext) {
         const {proj_state} = this;
         const {gl, program} = ctx;
@@ -32,6 +44,10 @@ export class VoxelChunkWorldRendering {
         gl.uniformMatrix4fv(program.uniform_projection_mat, false, proj_mat);
     }
 
+    /**
+     * @desc Updates the uniforms on the voxel rendering shader to match the active view state.
+     * NOTE: This utility requires that the voxel rendering shader be the actively bound program on the context.
+     */
     updateViewOnGpu(ctx: WorldChunksRenderingContext) {
         const {view_state} = this;
         const {gl, program} = ctx;
@@ -43,6 +59,13 @@ export class VoxelChunkWorldRendering {
         gl.uniformMatrix4fv(program.uniform_view_mat, false, view_mat);
     }
 
+    /**
+     * @desc Renders the chunks provided by the chunk_provider iterator. Employs frustum culling on a chunk by chunk basis
+     * based on the cpu mirror of the projection and view states.
+     * @param ctx: The WebGl context.
+     * @param chunk_provider: An iterator providing the chunk wrappers to be renderer.
+     * @param chunk_pos_getter: A callback used to find the position of the chunk in chunk world space for a given wrapped chunk.
+     */
     render<TChunk extends IVoxelChunkRendererWrapper>(ctx: WorldChunksRenderingContext, chunk_provider: IterableIterator<TChunk>, chunk_pos_getter: (chunk: TChunk) => vec3) {
         const {gl, program} = ctx;
         gl.useProgram(program.program);
