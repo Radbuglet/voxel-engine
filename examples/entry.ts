@@ -1,4 +1,4 @@
-import {VOXEL_RENDERING_SHADER, VoxelRenderingShader} from "../lib/voxel-render-core/defaultShaders";
+import {VOXEL_RENDERING_SHADER} from "../lib/voxel-render-core/defaultShaders";
 import {
     IVoxelChunkRendererWrapper,
     IVoxelMaterialProvider,
@@ -10,8 +10,6 @@ import {vec2, vec3} from "gl-matrix";
 import {VoxelWorldData} from "../lib/voxel-data/voxelWorldData";
 import {VoxelChunkWorldRendering, WorldChunksRenderingContext} from "../lib/voxel-render-core/voxelWorldChunksRenderer";
 import {clamp, signedModulo} from "../lib/helpers/scalar";
-import {ContinuousTaskQueue} from "../lib/helpers/flow/continuousTaskQueue";
-import {CountdownController} from "../lib/helpers/flow/countdownController";
 
 // Setup canvas
 const canvas = document.createElement("canvas");

@@ -1,8 +1,8 @@
 import VOXEL_VERTEX_SOURCE from "./shaders/voxel.vert";
 import VOXEL_FRAG_SOURCE from "./shaders/voxel.frag";
 import {GlCtx} from "../helpers/typescript/aliases";
-import {GL_UTILS} from "../helpers/gl/shaderLoading";
 import {OptionalReasoned} from "../helpers/typescript/optionalReasoned";
+import {GL_UTILS} from "../helpers/webGl/shaderLoading";
 
 export type VoxelRenderingShader = {
     program: WebGLProgram,

@@ -1,18 +1,15 @@
-export class ContinuousTaskQueue {
+export class ContinuousTaskQueue {  // TODO: Review ordering of logic to look for obscure ordering errors
     private run_state: "paused" | "running" | "stop" = "paused";
-    private readonly active_tasks = new Set<ActiveTask>();
+    private readonly active_tasks = new Set<ActiveTaskHandle>();
     private idle_task_queue: AsyncTaskProvider[] = [];
 
-    constructor(
-        private readonly max_concurrent_tasks: number,
-        private readonly on_fatal: (reason: string) => void)
-    {}
+    constructor(private readonly max_concurrent_tasks: number, private readonly on_fatal: (reason: string) => void) {}
 
     private runTask(task: AsyncTaskProvider) {
         const active_task_ctx = task(() => {
             this.active_tasks.delete(active_task_ctx);
             const {idle_task_queue} = this;
-            if (idle_task_queue.length > 0) {  // Run remaining task to replace this task's "thread"
+            if (this.run_state == "running" && idle_task_queue.length > 0) {  // Run remaining task to replace this task's "thread"
                 this.runTask(idle_task_queue.shift()!);
             }
         }, reason => {
@@ -63,8 +60,8 @@ export class ContinuousTaskQueue {
     }
 }
 
-type ActiveTask = {
+export type ActiveTaskHandle = {
     resume(): void;
     pause(can_resume: boolean): void;
 };
-export type AsyncTaskProvider = (finish: () => void, fatal: (reason: string) => void) => ActiveTask;
+export type AsyncTaskProvider = (finish: () => void, fatal: (reason: string) => void) => ActiveTaskHandle;
