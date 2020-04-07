@@ -1,4 +1,6 @@
-export class StepStatusController {
+export type SCCStatusUpdateHandler = (completed: number, total: number) => void;
+
+export class StepCountingController {
     public finished_steps = 0;
 
     /**
@@ -13,7 +15,7 @@ export class StepStatusController {
      */
     constructor(
             public total_steps: number,
-            public readonly step_status_updated: (completed: number, total: number) => void,
+            public readonly step_status_updated: SCCStatusUpdateHandler,
             public readonly once_finished: () => void)
     {}
 

@@ -1,11 +1,11 @@
 // Welcome to another corner of programming hell. This time, it's concurrency with the added twist of inconsistent
 // internal implementations to make time here quite "fun".  TODO: Debugging, testing, define behavior more rigorously
-type ExceptionHandler = (error: Error) => void;
+export type CTQExceptionHandler = (error: Error) => void;
 export type CTQTaskHandle = {
     resume: () => void,
     stop: (can_resume: boolean) => void
 };
-export type CTQTaskProvider = (finish: () => void, fatal: ExceptionHandler) => CTQTaskHandle;
+export type CTQTaskProvider = (finish: () => void, fatal: CTQExceptionHandler) => CTQTaskHandle;
 
 enum CTQStatus {
     Paused,
@@ -20,7 +20,7 @@ export class ContinuousTaskQueue {
     private tasks_to_start: CTQTaskProvider[] = [];
     private task_pool: CTQTaskProvider[] = [];
 
-    constructor(private readonly max_concurrent_tasks: number, private readonly fatal_exception_handler: ExceptionHandler) {}
+    constructor(private readonly max_concurrent_tasks: number, private readonly fatal_exception_handler: CTQExceptionHandler) {}
 
     private runTaskOnNextLoop(provider: CTQTaskProvider) {
         setTimeout(() => {  // TODO: Is there a more elegant way to do this?
