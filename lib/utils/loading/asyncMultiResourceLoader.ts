@@ -1,4 +1,4 @@
-import {RecordV} from "../typescript/aliases";
+import {RecordV} from "../typeSafety/aliases";
 import {ContinuousTaskQueue, CTQExceptionHandler, CTQTaskHandle} from "../flow/continuousTaskQueue";
 import {StepCountingController} from "../flow/stepCountingController";
 

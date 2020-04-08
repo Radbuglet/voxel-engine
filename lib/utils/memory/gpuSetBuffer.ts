@@ -1,5 +1,5 @@
 // Welcome to the intersection between GPU programming and algorithm programming ie. debugging hell
-import {GlCtx, TypedArray} from "../typescript/aliases";
+import {GlCtx, TypedArray} from "../typeSafety/aliases";
 import {readTypedArrayBytes} from "./typedArrays";
 
 type IdealCapacityGetter = (required_capacity: number) => number;

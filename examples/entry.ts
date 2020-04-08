@@ -5,7 +5,7 @@ import {
     VoxelChunkRenderer
 } from "../lib/voxel-render-core/voxelChunkRenderer";
 import {IVoxelChunkDataWrapper, VoxelChunkData} from "../lib/voxel-data/voxelChunkData";
-import {GlCtx} from "../lib/utils/typescript/aliases";
+import {GlCtx} from "../lib/utils/typeSafety/aliases";
 import {vec2, vec3} from "gl-matrix";
 import {VoxelWorldData} from "../lib/voxel-data/voxelWorldData";
 import {VoxelChunkWorldRendering, WorldChunksRenderingContext} from "../lib/voxel-render-core/voxelWorldChunksRenderer";

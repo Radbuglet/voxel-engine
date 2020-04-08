@@ -1,7 +1,7 @@
 import VOXEL_VERTEX_SOURCE from "./shaders/voxel.vert";
 import VOXEL_FRAG_SOURCE from "./shaders/voxel.frag";
-import {GlCtx} from "../utils/typescript/aliases";
-import {OptionalReasoned} from "../utils/typescript/optionalReasoned";
+import {GlCtx} from "../utils/typeSafety/aliases";
+import {OptionalReasoned} from "../utils/typeSafety/optionalReasoned";
 import {GL_UTILS} from "../utils/loading/shaderLoading";
 
 export type VoxelRenderingShader = {

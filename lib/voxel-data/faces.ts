@@ -1,5 +1,5 @@
 import {vec3} from "gl-matrix";
-import {IntBool, Vec3Axis} from "../utils/typescript/aliases";
+import {IntBool, Vec3Axis} from "../utils/typeSafety/aliases";
 import {makeNumberEncoder} from "../utils/memory/numberEncoder";
 
 // Chunk position encoding

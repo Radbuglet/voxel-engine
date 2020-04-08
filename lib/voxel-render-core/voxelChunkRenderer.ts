@@ -1,5 +1,5 @@
 import {GpuSetBuffer, GpuSetElement} from "../utils/memory/gpuSetBuffer";
-import {GlCtx} from "../utils/typescript/aliases";
+import {GlCtx} from "../utils/typeSafety/aliases";
 import {vec3} from "gl-matrix";
 import {FaceDefinition, FACES, FACES_LIST} from "../voxel-data/faces";
 import {IVoxelChunkDataWrapper, VoxelChunkPointer} from "../voxel-data/voxelChunkData";

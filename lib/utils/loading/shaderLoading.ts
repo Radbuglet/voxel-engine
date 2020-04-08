@@ -1,6 +1,6 @@
-import {GlCtx} from "../typescript/aliases";
+import {GlCtx} from "../typeSafety/aliases";
 import {CleanupPool} from "../memory/cleanupPool";
-import {OptionalReasoned} from "../typescript/optionalReasoned";
+import {OptionalReasoned} from "../typeSafety/optionalReasoned";
 
 export const GL_UTILS = {
     loadShader(gl: GlCtx, type: "VERTEX_SHADER" | "FRAGMENT_SHADER", source: string): OptionalReasoned<WebGLShader> {

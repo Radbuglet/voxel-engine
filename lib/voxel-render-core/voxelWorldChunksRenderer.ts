@@ -1,5 +1,5 @@
 import {mat4, vec3} from "gl-matrix";
-import {GlCtx} from "../utils/typescript/aliases";
+import {GlCtx} from "../utils/typeSafety/aliases";
 import {VoxelRenderingShader} from "./defaultShaders";
 import {IVoxelChunkRendererWrapper} from "./voxelChunkRenderer";
 

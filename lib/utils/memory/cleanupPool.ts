@@ -1,4 +1,4 @@
-import {GlCtx} from "../typescript/aliases";
+import {GlCtx} from "../typeSafety/aliases";
 
 export class CleanupPool {
     private readonly tasks: (() => void)[] = [];
