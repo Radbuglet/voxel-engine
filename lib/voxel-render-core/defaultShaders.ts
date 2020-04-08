@@ -9,6 +9,8 @@ export type VoxelRenderingShader = {
     uniform_chunk_pos: WebGLUniformLocation,
     uniform_projection_mat: WebGLUniformLocation,
     uniform_view_mat: WebGLUniformLocation,
+    uniform_textures_sampler: WebGLUniformLocation,
+    uniform_textures_count: WebGLUniformLocation,
     attrib_vertex_data: number
 };
 
@@ -35,6 +37,8 @@ export const VOXEL_RENDERING_SHADER = {
             uniform_view_mat: gl.getUniformLocation(program, "view")!,
             uniform_projection_mat: gl.getUniformLocation(program, "projection")!,
             uniform_chunk_pos: gl.getUniformLocation(program, "chunk_pos")!,
+            uniform_textures_sampler: gl.getUniformLocation(program, "texture_sampler")!,
+            uniform_textures_count: gl.getUniformLocation(program, "tex_frame_counts")!,
             attrib_vertex_data: gl.getAttribLocation(program, "vertex_data")
         }
     },

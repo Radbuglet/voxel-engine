@@ -37,7 +37,7 @@ export class StepCountingController {
      * The once_finished event can ONLY be called as a result of this method.
      */
     finishStep() {
-        console.assert(this.finished_steps >= this.total_steps, "More steps reported as finished than registered.");
+        console.assert(this.finished_steps < this.total_steps, "More steps reported as finished than registered.");
         this.finished_steps++;
         this.updateStatus();
         if (this.finished_steps === this.total_steps) {

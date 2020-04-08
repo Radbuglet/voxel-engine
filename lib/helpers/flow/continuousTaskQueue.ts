@@ -66,7 +66,7 @@ export class ContinuousTaskQueue {
      * @param max_concurrent_tasks: The maximum number of tasks that can be ran at a time.
      * @param fatal_exception_handler: An callback used when a task reports a fatal error. Only called once.
      */
-    constructor(private readonly max_concurrent_tasks: number, private readonly fatal_exception_handler: CTQExceptionHandler) {}
+    constructor(private readonly max_concurrent_tasks: number, public fatal_exception_handler: CTQExceptionHandler | null) {}
 
     private runTaskOnNextLoop(provider: CTQTaskProvider) {
         setTimeout(() => {  // TODO: Is there a more elegant way to do this?
@@ -110,7 +110,7 @@ export class ContinuousTaskQueue {
             }, e => {
                 if (this.status === CTQStatus.Stopped) return;  // Only once exception can be triggered.
                 this.stop();
-                this.fatal_exception_handler(e);
+                if (this.fatal_exception_handler) this.fatal_exception_handler(e);
             });
 
             // ...and register it for resuming and pausing purposes.
