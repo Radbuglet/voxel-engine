@@ -2,15 +2,16 @@ import {RecordV} from "../typescript/aliases";
 import {ContinuousTaskQueue, CTQExceptionHandler, CTQTaskHandle} from "../flow/continuousTaskQueue";
 import {SCCStatusUpdateHandler, StepCountingController} from "../flow/stepCountingController";
 
-export type AsyncResourceProvider<TRes> = (finished: (res: TRes) => void, fatal: CTQExceptionHandler) => CTQTaskHandle;
+export type AsyncResourceProvider<TRes> = (finished: (res: TRes) => void, fatal: CTQExceptionHandler) => CTQTaskHandle | null;
 type ResourceProviders<TResourcesLoaded extends RecordV<any>> = {
     [K in keyof TResourcesLoaded]: AsyncResourceProvider<TResourcesLoaded[K]>
 };
 
-export class AsyncResourceLoader<TResourcesLoaded extends RecordV<any>> {
+export class AsyncMultiResourceLoader<TResourcesLoaded extends RecordV<any>> {
     private readonly task_queue: ContinuousTaskQueue;
     constructor(
-            resources: ResourceProviders<TResourcesLoaded>, max_concurrent_tasks: number, start_immediately: boolean,
+            max_concurrent_tasks: number, start_immediately: boolean,
+            resources: ResourceProviders<TResourcesLoaded>,
             on_progress: SCCStatusUpdateHandler, on_success: (res: TResourcesLoaded) => void, on_fatal: CTQExceptionHandler) {
         const loaded_resources: TResourcesLoaded = {} as any;
         const task_queue = this.task_queue = new ContinuousTaskQueue(max_concurrent_tasks, on_fatal);

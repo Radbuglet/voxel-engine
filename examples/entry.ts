@@ -10,6 +10,8 @@ import {vec2, vec3} from "gl-matrix";
 import {VoxelWorldData} from "../lib/voxel-data/voxelWorldData";
 import {VoxelChunkWorldRendering, WorldChunksRenderingContext} from "../lib/voxel-render-core/voxelWorldChunksRenderer";
 import {clamp, signedModulo} from "../lib/helpers/scalar";
+import {AsyncMultiResourceLoader} from "../lib/helpers/loading/asyncMultiResourceLoader";
+import {makeTextureLoader} from "../lib/helpers/loading/textureLoading";
 
 // Setup canvas
 const canvas = document.createElement("canvas");
@@ -32,7 +34,21 @@ const material_provider: IVoxelMaterialProvider<ExampleChunk, number> = {
 };
 
 // Load textures
-// TODO
+const multi_resource_loader = new AsyncMultiResourceLoader(
+    9, true,
+    {
+        voxel_images: makeTextureLoader("", null)
+    },
+    (completed, total) => {
+        console.log("Loading textures...", completed, "/", total);
+    },
+    res => {
+        console.log("Finished loading resources");  // TODO
+    },
+    error => {
+        console.error(error);
+    }
+);
 
 // Define world
 class ExampleWorld {

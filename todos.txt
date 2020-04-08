@@ -6,6 +6,7 @@ TODO: Add assertions to prevent stupid bugs.
 TODO: Remake face system so it's more extendable
 TODO: Clean up internal comments
 TODO: Tests!
+TODO: JSDoc cleanup
 
 Planned abstractions:
 [ ] Chunk loading manager
