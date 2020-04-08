@@ -2,6 +2,7 @@ import {GlCtx} from "../typescript/aliases";
 
 export class CleanupPool {
     private readonly tasks: (() => void)[] = [];
+
     registerTask(task: () => void) {
         this.tasks.push(task);
     }

@@ -51,7 +51,7 @@ export class GpuSetBuffer {
     }
 
     /**
-     * @desc Prepares the buffer by initializing the buffer's capacity to the ideal capacity and constructs a new GlSetBuffer
+     * @desc Prepares the buffer by initializing the buffer's capacity to the ideal capacity and constructs a new GpuSetBuffer
      * for the provided buffer. All arguments except "gl" are relayed to the constructor. See the constructor for more
      * information on the requirements for the parameters.
      * PRECONDITION: The target buffer (implied. No actual buffer is ever passed) must be bound to the ARRAY_BUFFER WebGL register.
