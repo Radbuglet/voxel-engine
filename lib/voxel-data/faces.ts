@@ -1,6 +1,6 @@
 import {vec3} from "gl-matrix";
-import {IntBool, Vec3Axis} from "../helpers/typescript/aliases";
-import {makeNumberEncoder} from "../helpers/memory/numberEncoder";
+import {IntBool, Vec3Axis} from "../utils/typescript/aliases";
+import {makeNumberEncoder} from "../utils/memory/numberEncoder";
 
 // Chunk position encoding
 const POS_ENCODING_CHUNK_DIM = 17;  // Must be the same as the constant in the vertex shader.

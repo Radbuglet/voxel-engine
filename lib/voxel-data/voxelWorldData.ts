@@ -1,7 +1,7 @@
 import {IVoxelChunkDataWrapper, VoxelChunkPointer} from "./voxelChunkData";
 import {vec3} from "gl-matrix";
 import {CHUNK_BLOCK_COUNT, FaceDefinition, FACES_LIST} from "./faces";
-import {signedModulo} from "../helpers/scalar";
+import {signedModulo} from "../utils/scalar";
 
 /**
  * @desc Contains the voxel data chunks and ensures that they get properly updated.

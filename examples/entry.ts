@@ -5,13 +5,13 @@ import {
     VoxelChunkRenderer
 } from "../lib/voxel-render-core/voxelChunkRenderer";
 import {IVoxelChunkDataWrapper, VoxelChunkData} from "../lib/voxel-data/voxelChunkData";
-import {GlCtx} from "../lib/helpers/typescript/aliases";
+import {GlCtx} from "../lib/utils/typescript/aliases";
 import {vec2, vec3} from "gl-matrix";
 import {VoxelWorldData} from "../lib/voxel-data/voxelWorldData";
 import {VoxelChunkWorldRendering, WorldChunksRenderingContext} from "../lib/voxel-render-core/voxelWorldChunksRenderer";
-import {clamp, signedModulo} from "../lib/helpers/scalar";
-import {AsyncMultiResourceLoader} from "../lib/helpers/loading/asyncMultiResourceLoader";
-import {makeTextureLoader} from "../lib/helpers/loading/textureLoading";
+import {clamp, signedModulo} from "../lib/utils/scalar";
+import {AsyncMultiResourceLoader} from "../lib/utils/loading/asyncMultiResourceLoader";
+import {makeTextureLoader} from "../lib/utils/loading/textureLoading";
 import VOXEL_TEXTURES_URL from "./voxel_textures.png";
 
 // Setup canvas
@@ -70,7 +70,7 @@ multi_resource_loader.promise
                     origin: [0.5, 0.5, 4],
                     pitch: 0,  // horizontal
                     yaw: 0     // vertical
-                })
+                });
             }
 
             private static getChunkRenderCtx(gl: GlCtx): WorldChunksRenderingContext {

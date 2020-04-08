@@ -1,6 +1,6 @@
 import {vec3} from "gl-matrix";
 import {CHUNK_BLOCK_COUNT, encodeChunkPos, FaceDefinition, FaceKey} from "./faces";
-import {signedModulo} from "../helpers/scalar";
+import {signedModulo} from "../utils/scalar";
 
 export interface IVoxelChunkDataWrapper<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkWrapper, TVoxel>, TVoxel> {
     voxel_chunk_data: VoxelChunkData<TChunkWrapper, TVoxel>;
