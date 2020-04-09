@@ -11,13 +11,13 @@ export class VoxelRayCaster<TChunk extends IVoxelChunkDataWrapper<TChunk, TVoxel
      * @constructor Constructs a ray that works on a given world and starts at a given position. This class does not
      * perform ray termination automatically as this task is up to the external scope.
      * @param world_data: The world data to be operated on.
-     * @param position: The starting position of the ray. THIS VECTOR WILL BE MODIFIED!!!
+     * @param ref_position: The starting position of the ray. THIS VECTOR WILL BE MODIFIED!!!
      */
-    constructor(private readonly world_data: VoxelWorldData<TChunk, TVoxel>, position: vec3) {
-        const pointer = world_data.getVoxelPointer(position);
+    constructor(private readonly world_data: VoxelWorldData<TChunk, TVoxel>, ref_position: vec3) {
+        const pointer = world_data.getVoxelPointer(ref_position);
         this.state = pointer != null ?
-            { type: "tracking", position, pointer } :
-            { type: "floating", position };
+            { type: "tracking", position: ref_position, pointer } :
+            { type: "floating", position: ref_position };
     }
 
     /**

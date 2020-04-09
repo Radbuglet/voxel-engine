@@ -1,6 +1,5 @@
 TODOs in this file unlike TODOs in project files, are intended to be long term goals whereas TODOs in files are supposed to be more short term.
 TODO: Optimize the project's abstractions (internal and external): 1. Data  2. Rendering  3. Redundant allocs
-TODO: Figure out vectors!
 TODO: Clean up logic
 TODO: Document remaining classes
 TODO: Add assertions to prevent stupid bugs.

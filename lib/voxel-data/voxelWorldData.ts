@@ -24,7 +24,7 @@ export class VoxelWorldData<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkW
 
     /**
      * @desc Adds a chunk to the container.
-     * @param chunk_pos: The chunk's position (in chunk space ie $world_pos/CHUNK_BLOCK_COUNT$, not world space.)
+     * @param chunk_pos: The chunk's position (in world chunk space ie "world_pos/CHUNK_BLOCK_COUNT", not world voxel space)
      * @param added_chunk: An instance of a chunk that isn't tracked by anything else.
      */
     putChunk(chunk_pos: vec3, added_chunk: TChunkWrapper): TChunkWrapper {
@@ -87,6 +87,8 @@ export class VoxelWorldData<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkW
      * will be called, the returned instance will be added to the map, and the pointer will be returned.
      * @param voxel_pos: The position of the voxel IN WORLD VOXEL SPACE.
      * @param chunk_factory: A factory that creates an empty chunk.
+     * NOTE: You are completely allowed to use the chunk_pos. After the pos is passed to the factory, it is no longer
+     * used by this utility for anything.
      */
     getVoxelPointerOrPatch(voxel_pos: vec3, chunk_factory: (chunk_pos: vec3) => TChunkWrapper): VoxelChunkPointer<TChunkWrapper, TVoxel> {
         const ref_pos_wcs = vec3.create();

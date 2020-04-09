@@ -42,13 +42,13 @@ export class VoxelChunkPointer<TChunkWrapper extends IVoxelChunkDataWrapper<TChu
      * @desc Creates a new voxel chunk pointer.
      * NOTE: It is recommended to use VoxelChunkData.getVoxelPointer() instead as for most external purposes, this is all need.
      * @param chunk_wrapped: The wrapped chunk that this pointer is pointing at.
-     * @param pos: The position of the voxel in chunk relative space.
+     * @param ref_pos: The position of the voxel in chunk relative space.
      * This position is never modified by this utility however you must ensure that if the position object gets
      * modified externally, the encoded_position must also change.
      * @param encoded_pos: The position of the voxel in chunk relative space. Must update
      */
-    constructor(public readonly chunk_wrapped: TChunkWrapper, public pos: vec3, public encoded_pos: number) {
-        this.encoded_pos = encodeChunkPos(pos);
+    constructor(public readonly chunk_wrapped: TChunkWrapper, public ref_pos: vec3, public encoded_pos: number) {
+        this.encoded_pos = encodeChunkPos(ref_pos);
     }
 
     /**
@@ -58,7 +58,7 @@ export class VoxelChunkPointer<TChunkWrapper extends IVoxelChunkDataWrapper<TChu
      */
     getNeighbor(face: FaceDefinition): VoxelChunkPointer<TChunkWrapper, TVoxel> | null {
         const new_pos = vec3.create();
-        vec3.add(new_pos, this.pos, face.vec_relative);
+        vec3.add(new_pos, this.ref_pos, face.vec_relative);
         const face_axis_value = new_pos[face.axis.vec_axis];
         if (face_axis_value < 0 || face_axis_value >= CHUNK_BLOCK_COUNT) {  // No longer in the chunk bounds.
             const new_chunk = this.chunk_wrapped.voxel_chunk_data.neighbors.get(face.towards_key);
@@ -102,11 +102,12 @@ export class VoxelChunkPointer<TChunkWrapper extends IVoxelChunkDataWrapper<TChu
 
     /**
      * @desc Replaces the position vector with a new position vector and properly re-encodes the position.
-     * @param chunk_pos: Position of target voxel in chunk relative space.
+     * @param ref_pos: Position of target voxel in chunk relative space.
      * NOTE: Moving to positions outside of the current chunk is undefined behavior.
+     * NOTE: Same rules as ref_pos in constructor apply here as well!
      */
-    moveTo(chunk_pos: vec3) {
-        this.encoded_pos = encodeChunkPos(chunk_pos);
-        this.pos = chunk_pos;
+    moveTo(ref_pos: vec3) {
+        this.encoded_pos = encodeChunkPos(ref_pos);
+        this.ref_pos = ref_pos;
     }
 }
