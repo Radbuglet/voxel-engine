@@ -2,7 +2,7 @@ import VOXEL_VERTEX_SOURCE from "./shaders/voxel.vert";
 import VOXEL_FRAG_SOURCE from "./shaders/voxel.frag";
 import {GlCtx} from "../utils/typeSafety/aliases";
 import {OptionalReasoned} from "../utils/typeSafety/optionalReasoned";
-import {GL_UTILS} from "../utils/loading/shaderLoading";
+import {GlShaderUtils} from "../utils/loading/shaderLoading";
 
 export type CoreChunkRenderingShader = {
     program: WebGLProgram,
@@ -50,7 +50,7 @@ export const CoreVoxelRenderingShader = {
      */
     loadDefaultVoxelShader(gl: GlCtx): OptionalReasoned<CoreChunkRenderingShader> {
         const {VERTEX, FRAGMENT} = this.source;
-        const program_optional = GL_UTILS.loadProgram(gl, VERTEX, FRAGMENT);
+        const program_optional = GlShaderUtils.loadProgram(gl, VERTEX, FRAGMENT);
         if (!OptionalReasoned.isPresent(program_optional.raw)) return program_optional as any;
         return OptionalReasoned.success(this.wrapLoadedVoxelProgram(gl, program_optional.raw.obj));
     }

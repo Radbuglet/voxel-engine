@@ -13,6 +13,7 @@ import {clamp, signedModulo} from "../lib/utils/scalar";
 import {AsyncMultiResourceLoader} from "../lib/utils/loading/asyncMultiResourceLoader";
 import {makeTextureLoader} from "../lib/utils/loading/textureLoading";
 import VOXEL_TEXTURES_URL from "./voxel_textures.png";
+import {VoxelRayCaster} from "../lib/voxel-data/voxelRayCaster";
 
 // Setup canvas
 const canvas = document.createElement("canvas");
@@ -182,7 +183,7 @@ multi_resource_loader.promise
             keys_down.delete(e.key);
         });
 
-        document.body.addEventListener("mousedown", e => {
+        document.body.addEventListener("mousedown", () => {
             canvas.requestPointerLock();
         });
         document.body.addEventListener("mousemove", e => {

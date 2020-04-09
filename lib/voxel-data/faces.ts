@@ -157,3 +157,13 @@ export const FACES_LIST: FaceDefinition[] = [
     FACES.py,
     FACES.pz
 ];
+export const FACE_AXIS_AND_SIGN_MAP = [{
+    positive: FACES.px,
+    negative: FACES.nx
+}, {
+    positive: FACES.py,
+    negative: FACES.ny
+}, {
+    positive: FACES.pz,
+    negative: FACES.nz
+}];

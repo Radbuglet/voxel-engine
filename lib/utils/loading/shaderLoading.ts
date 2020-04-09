@@ -2,7 +2,7 @@ import {GlCtx} from "../typeSafety/aliases";
 import {CleanupPool} from "../memory/cleanupPool";
 import {OptionalReasoned} from "../typeSafety/optionalReasoned";
 
-export const GL_UTILS = {
+export const GlShaderUtils = {
     loadShader(gl: GlCtx, type: "VERTEX_SHADER" | "FRAGMENT_SHADER", source: string): OptionalReasoned<WebGLShader> {
         const shader = gl.createShader(gl[type])!;
         gl.shaderSource(shader, source);

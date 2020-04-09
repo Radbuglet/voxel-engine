@@ -50,6 +50,20 @@ export class VoxelWorldData<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkW
     }
 
     /**
+     * @desc Removes a chunk from the container. Correctly updates the neighboring chunks but not the chunk being removed.
+     * @param chunk_pos: The chunk's position in world chunk space (see above)
+     */
+    deleteChunk(chunk_pos: vec3) {
+        const {chunks} = this;
+        const encoded_pos = VoxelWorldData.encodeChunkPosition(chunk_pos);
+        console.assert(chunks.has(encoded_pos));
+        chunks.delete(encoded_pos);
+        this.processNeighbors(chunk_pos, (face, neighbor_chunk) => {
+            neighbor_chunk.voxel_chunk_data.neighbors.delete(face.inverse_key);
+        });
+    }
+
+    /**
      * @desc Gets the voxel pointer in world space.
      * Returns a pointer if the chunk exists (regardless of if the voxel actually has any data or not) and null
      * if the chunk the voxel pertains to is non-existent.
@@ -60,11 +74,8 @@ export class VoxelWorldData<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkW
      * to reuse a vector to avoid reallocating new memory.
      */
     getVoxelPointer(voxel_pos: vec3, ref_pos_wcs = vec3.create(), ref_pos_crs = vec3.create()): VoxelChunkPointer<TChunkWrapper, TVoxel> | null {
-        ref_pos_crs[0] = signedModulo(voxel_pos[0], CHUNK_BLOCK_COUNT);
-        ref_pos_crs[1] = signedModulo(voxel_pos[1], CHUNK_BLOCK_COUNT);
-        ref_pos_crs[2] = signedModulo(voxel_pos[2], CHUNK_BLOCK_COUNT);
-        vec3.divide(ref_pos_wcs, voxel_pos, [CHUNK_BLOCK_COUNT, CHUNK_BLOCK_COUNT, CHUNK_BLOCK_COUNT]);
-        vec3.floor(ref_pos_wcs, ref_pos_wcs);
+        VoxelWorldData.worldSpaceToWorldChunkSpace(voxel_pos, ref_pos_wcs);
+        VoxelWorldData.worldSpaceToChunkRelativeSpace(voxel_pos, ref_pos_crs);
 
         const chunk = this.getChunk(ref_pos_wcs);
         if (chunk == null) return null;
@@ -90,20 +101,6 @@ export class VoxelWorldData<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkW
         return new_chunk.voxel_chunk_data.getVoxelPointer(ref_pos_crs);
     }
 
-    /**
-     * @desc Removes a chunk from the container. Correctly updates the neighboring chunks but not the chunk being removed.
-     * @param chunk_pos: The chunk's position in chunk space (see above)
-     */
-    deleteChunk(chunk_pos: vec3) {
-        const {chunks} = this;
-        const encoded_pos = VoxelWorldData.encodeChunkPosition(chunk_pos);
-        console.assert(chunks.has(encoded_pos));
-        chunks.delete(encoded_pos);
-        this.processNeighbors(chunk_pos, (face, neighbor_chunk) => {
-            neighbor_chunk.voxel_chunk_data.neighbors.delete(face.inverse_key);
-        });
-    }
-
     private processNeighbors(pos: vec3, handle_neighbor: (face: FaceDefinition, neighbor_chunk: TChunkWrapper) => void) {
         const {chunks} = this;
         const neighbor_lookup_vec = vec3.create();
@@ -113,5 +110,18 @@ export class VoxelWorldData<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkW
             if (neighbor_chunk == null) continue;
             handle_neighbor(face, neighbor_chunk);
         }
+    }
+
+    static worldSpaceToWorldChunkSpace(pos: vec3, write_to = vec3.create()) {
+        vec3.divide(write_to, pos, [CHUNK_BLOCK_COUNT, CHUNK_BLOCK_COUNT, CHUNK_BLOCK_COUNT]);
+        vec3.floor(write_to, write_to);
+        return write_to;
+    }
+
+    static worldSpaceToChunkRelativeSpace(pos: vec3, write_to = vec3.create()) {
+        write_to[0] = signedModulo(pos[0], CHUNK_BLOCK_COUNT);
+        write_to[1] = signedModulo(pos[1], CHUNK_BLOCK_COUNT);
+        write_to[2] = signedModulo(pos[2], CHUNK_BLOCK_COUNT);
+        return write_to;
     }
 }
