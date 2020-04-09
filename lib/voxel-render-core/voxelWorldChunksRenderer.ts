@@ -1,11 +1,11 @@
 import {mat4, vec3} from "gl-matrix";
 import {GlCtx} from "../utils/typeSafety/aliases";
-import {VoxelRenderingShader} from "./defaultShaders";
+import {CoreChunkRenderingShader} from "./defaultShaders";
 import {IVoxelChunkRendererWrapper} from "./voxelChunkRenderer";
 
 export type WorldChunksRenderingContext = {
     gl: GlCtx,
-    program: VoxelRenderingShader
+    program: CoreChunkRenderingShader
 };
 type ProjState = {
     clipping_near: number,

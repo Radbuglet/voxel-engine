@@ -17,7 +17,7 @@ export interface IRenderBucket<TContext, TTarget> {
  * state that doesn't need to be modified.
  * NOTE: Entity buckets and the entities they contain are rendered in an arbitrary order.
  */
-export class VoxelEntityRenderer<TContext> {
+export class EntityBatchesRenderer<TContext> {
     private readonly entity_buckets = new Map<IRenderBucket<TContext, any>, Set<any>>();
 
     registerEntity<TTarget extends IRenderBucketProvider<TContext, TTarget>>(target: TTarget) {

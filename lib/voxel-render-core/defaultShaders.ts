@@ -4,7 +4,7 @@ import {GlCtx} from "../utils/typeSafety/aliases";
 import {OptionalReasoned} from "../utils/typeSafety/optionalReasoned";
 import {GL_UTILS} from "../utils/loading/shaderLoading";
 
-export type VoxelRenderingShader = {
+export type CoreChunkRenderingShader = {
     program: WebGLProgram,
     uniform_chunk_pos: WebGLUniformLocation,
     uniform_projection_mat: WebGLUniformLocation,
@@ -14,7 +14,7 @@ export type VoxelRenderingShader = {
     attrib_vertex_data: number
 };
 
-export const VOXEL_RENDERING_SHADER = {
+export const CoreVoxelRenderingShader = {
     /**
      * @desc The sources for the default voxel rendering shaders
      */
@@ -31,7 +31,7 @@ export const VOXEL_RENDERING_SHADER = {
      * @param program: The program to be wrapped. Must have attribute and uniform names comply with those of the default
      * shader. Fails silently otherwise.
      */
-    wrapLoadedVoxelProgram(gl: GlCtx, program: WebGLProgram): VoxelRenderingShader {
+    wrapLoadedVoxelProgram(gl: GlCtx, program: WebGLProgram): CoreChunkRenderingShader {
         return {
             program,
             uniform_view_mat: gl.getUniformLocation(program, "view")!,
@@ -48,7 +48,7 @@ export const VOXEL_RENDERING_SHADER = {
      * @param gl: The WebGl context
      * @returns An optional with either the wrapped program or a failure state.
      */
-    loadDefaultVoxelShader(gl: GlCtx): OptionalReasoned<VoxelRenderingShader> {
+    loadDefaultVoxelShader(gl: GlCtx): OptionalReasoned<CoreChunkRenderingShader> {
         const {VERTEX, FRAGMENT} = this.source;
         const program_optional = GL_UTILS.loadProgram(gl, VERTEX, FRAGMENT);
         if (!OptionalReasoned.isPresent(program_optional.raw)) return program_optional as any;

@@ -103,6 +103,7 @@ export class VoxelChunkPointer<TChunkWrapper extends IVoxelChunkDataWrapper<TChu
     /**
      * @desc Replaces the position vector with a new position vector and properly re-encodes the position.
      * @param chunk_pos: Position of target voxel in chunk relative space.
+     * NOTE: Moving to positions outside of the current chunk is undefined behavior.
      */
     moveTo(chunk_pos: vec3) {
         this.encoded_pos = encodeChunkPos(chunk_pos);

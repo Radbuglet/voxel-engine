@@ -1,4 +1,4 @@
-import {VOXEL_RENDERING_SHADER} from "../lib/voxel-render-core/defaultShaders";
+import {CoreVoxelRenderingShader} from "../lib/voxel-render-core/defaultShaders";
 import {
     IVoxelChunkRendererWrapper,
     IVoxelMaterialProvider,
@@ -30,7 +30,7 @@ const multi_resource_loader = new AsyncMultiResourceLoader(
 multi_resource_loader.promise
     .then(assets => {
         // Create shading stuff
-        const voxel_shader = VOXEL_RENDERING_SHADER.loadDefaultVoxelShader(gl).getOrThrow();
+        const voxel_shader = CoreVoxelRenderingShader.loadDefaultVoxelShader(gl).getOrThrow();
         gl.useProgram(voxel_shader.program);
 
         const material_provider: IVoxelMaterialProvider<ExampleChunk, number> = {

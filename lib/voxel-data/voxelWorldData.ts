@@ -53,21 +53,41 @@ export class VoxelWorldData<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkW
      * @desc Gets the voxel pointer in world space.
      * Returns a pointer if the chunk exists (regardless of if the voxel actually has any data or not) and null
      * if the chunk the voxel pertains to is non-existent.
-     * @param voxel_pos: The position of the voxel IN WORLD SPACE.
-     * NOTE: This method will make modifications to the passed vector.
+     * @param voxel_pos: The position of the voxel IN WORLD VOXEL SPACE.
+     * @param ref_pos_wcs: The optional vector to be written to with the chunk position in WORLD CHUNK SPACE. Also used
+     * to reuse a vector to avoid reallocating new memory.
+     * @param ref_pos_crs: The optional vector to be written to with the chunk position in CHUNK RELATIVE SPACE. Also used
+     * to reuse a vector to avoid reallocating new memory.
      */
-    getVoxelPointerWs(voxel_pos: vec3): VoxelChunkPointer<TChunkWrapper, TVoxel> | null {
-        const inner_chunk_pos: vec3 = [
-            signedModulo(voxel_pos[0], CHUNK_BLOCK_COUNT),
-            signedModulo(voxel_pos[1], CHUNK_BLOCK_COUNT),
-            signedModulo(voxel_pos[2], CHUNK_BLOCK_COUNT)
-        ];
-        vec3.divide(voxel_pos, voxel_pos, [CHUNK_BLOCK_COUNT, CHUNK_BLOCK_COUNT, CHUNK_BLOCK_COUNT]);
-        vec3.floor(voxel_pos, voxel_pos);
+    getVoxelPointer(voxel_pos: vec3, ref_pos_wcs = vec3.create(), ref_pos_crs = vec3.create()): VoxelChunkPointer<TChunkWrapper, TVoxel> | null {
+        ref_pos_crs[0] = signedModulo(voxel_pos[0], CHUNK_BLOCK_COUNT);
+        ref_pos_crs[1] = signedModulo(voxel_pos[1], CHUNK_BLOCK_COUNT);
+        ref_pos_crs[2] = signedModulo(voxel_pos[2], CHUNK_BLOCK_COUNT);
+        vec3.divide(ref_pos_wcs, voxel_pos, [CHUNK_BLOCK_COUNT, CHUNK_BLOCK_COUNT, CHUNK_BLOCK_COUNT]);
+        vec3.floor(ref_pos_wcs, ref_pos_wcs);
 
-        const chunk = this.getChunk(voxel_pos);  // voxel_pos, thanks to the division, is now the position in chunk world space.
+        const chunk = this.getChunk(ref_pos_wcs);
         if (chunk == null) return null;
-        return chunk!.voxel_chunk_data.getVoxelPointer(inner_chunk_pos);
+        return chunk!.voxel_chunk_data.getVoxelPointer(ref_pos_crs);
+    }
+
+    /**
+     * @desc Gets the voxel pointer in world space. If the chunk to which the voxel points at doesn't exist, the chunk_factory
+     * will be called, the returned instance will be added to the map, and the pointer will be returned.
+     * @param voxel_pos: The position of the voxel IN WORLD VOXEL SPACE.
+     * @param chunk_factory: A factory that creates an empty chunk.
+     */
+    getVoxelPointerOrPatch(voxel_pos: vec3, chunk_factory: (chunk_pos: vec3) => TChunkWrapper): VoxelChunkPointer<TChunkWrapper, TVoxel> {
+        const ref_pos_wcs = vec3.create();
+        const ref_pos_crs = vec3.create();
+        {
+            const existing_pointer = this.getVoxelPointer(voxel_pos, ref_pos_wcs, ref_pos_crs);
+            if (existing_pointer != null) return existing_pointer;
+        }
+
+        const new_chunk = chunk_factory(ref_pos_wcs);
+        this.putChunk(ref_pos_wcs, new_chunk);
+        return new_chunk.voxel_chunk_data.getVoxelPointer(ref_pos_crs);
     }
 
     /**
