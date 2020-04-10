@@ -11,7 +11,7 @@ export const encodeChunkPos = makeNumberEncoder([
     4, 2  // Face encoding data
 ]);
 const encodeMaterialData = makeNumberEncoder([
-    2, 2,   // UV
+    2, 2,   // UV (x and y)
     64,     // Light
     256     // Texture
 ]);
@@ -66,14 +66,14 @@ export class FaceAxis {
 export const FACE_AXIS = {
     X: new FaceAxis([
         // Tri 1
-        {pos: [0, 0, 0], uv: [0, 0]},
-        {pos: [0, 1, 1], uv: [1, 1]},
-        {pos: [0, 0, 1], uv: [0, 1]},
+        {pos: [0, 0, 0], uv: [0, 1]},
+        {pos: [0, 1, 1], uv: [1, 0]},
+        {pos: [0, 0, 1], uv: [1, 1]},
 
         // Tri 2
-        {pos: [0, 0, 0], uv: [0, 0]},
-        {pos: [0, 1, 0], uv: [1, 0]},
-        {pos: [0, 1, 1], uv: [1, 1]}
+        {pos: [0, 0, 0], uv: [0, 1]},
+        {pos: [0, 1, 0], uv: [0, 0]},
+        {pos: [0, 1, 1], uv: [1, 0]}
     ], 0),
     Y: new FaceAxis([
         // Tri 1
@@ -88,14 +88,14 @@ export const FACE_AXIS = {
     ], 1),
     Z: new FaceAxis([
         // Tri 1
-        {pos: [0, 0, 0], uv: [0, 0]},
-        {pos: [1, 0, 0], uv: [1, 0]},
-        {pos: [1, 1, 0], uv: [1, 1]},
+        {pos: [0, 0, 0], uv: [0, 1]},
+        {pos: [1, 0, 0], uv: [1, 1]},
+        {pos: [1, 1, 0], uv: [1, 0]},
 
         // Tri 2
-        {pos: [0, 0, 0], uv: [0, 0]},
-        {pos: [1, 1, 0], uv: [1, 1]},
-        {pos: [0, 1, 0], uv: [0, 1]}
+        {pos: [0, 0, 0], uv: [0, 1]},
+        {pos: [1, 1, 0], uv: [1, 0]},
+        {pos: [0, 1, 0], uv: [0, 0]}
     ], 2)
 };
 

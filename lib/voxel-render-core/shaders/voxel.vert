@@ -11,7 +11,7 @@ uniform mat4 view;
 uniform vec2 tex_frame_counts;
 
 // Vertex attributes
-attribute vec2 vertex_data;  // (pos_idx, material: 8<texture_id> 6<light> 2<uv>)
+attribute vec2 vertex_data;  // (pos_idx, material: 8<texture_id> 6<light> 1<uv x> 1<uv y>)
 #define pos_idx vertex_data.x
 #define mat_data vertex_data.y
 
@@ -36,8 +36,8 @@ void main() {
     light = floor(second_part / 4.0);
     float uv_encoded = mod(second_part, 4.0);
     uv = vec2(  // Determine UV in "frame grid space"
-        mod(texture_idx, tex_frame_counts.x)    + (uv_encoded > 1.0 ? 1.0 : 0.0),  // Equivalent to: >= 2.0 (when the 2nd bit is high)
-        floor(texture_idx / tex_frame_counts.x) + (mod(uv_encoded, 2.0) == 1.0 ? 1.0 : 0.0))
+        mod(texture_idx, tex_frame_counts.x)    + (mod(uv_encoded, 2.0) == 1.0 ? 1.0 : 0.0),  // ie is least significant bit high?
+        floor(texture_idx / tex_frame_counts.x) + (uv_encoded > 1.0 ? 1.0 : 0.0))  // ie is 2nd to least significant bit high?
     / vec2(tex_frame_counts.x, tex_frame_counts.y);  // Convert to absolute texture UV
 
     // Gl stuff
