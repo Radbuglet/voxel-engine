@@ -3,7 +3,7 @@ import {GlCtx} from "../utils/typeSafety/aliases";
 import {vec3} from "gl-matrix";
 import {FaceDefinition, FACES, FACES_LIST} from "../voxel-data/faces";
 import {IVoxelChunkDataWrapper, VoxelChunkPointer} from "../voxel-data/voxelChunkData";
-import {CoreChunkRenderingShader} from "./defaultShaders";
+import {ChunkRenderingShader} from "./defaultShaders";
 
 export interface IVoxelMaterialProvider<TChunkWrapper extends IVoxelChunkDataWrapper<TChunkWrapper, TVoxel>, TVoxel> {
     parseMaterialOfVoxel(pointer: VoxelChunkPointer<TChunkWrapper, TVoxel>, face: FaceDefinition): { texture: number, light: number };
@@ -50,7 +50,7 @@ export class VoxelChunkRenderer {
      * NOTE: This program must be activated before calling this method.
      * @param chunk_pos: The position of the chunk in chunk world space.
      */
-    render(gl: GlCtx, program: CoreChunkRenderingShader, chunk_pos: vec3) {
+    render(gl: GlCtx, program: ChunkRenderingShader, chunk_pos: vec3) {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
         gl.uniform3fv(program.uniform_chunk_pos, chunk_pos);
         gl.vertexAttribPointer(program.attrib_vertex_data, 2, gl.UNSIGNED_SHORT, false, 0, 0);

@@ -8,12 +8,12 @@ import {IVoxelChunkDataWrapper, VoxelChunkData} from "../lib/voxel-data/voxelChu
 import {GlCtx} from "../lib/utils/typeSafety/aliases";
 import {vec2, vec3} from "gl-matrix";
 import {VoxelWorldData} from "../lib/voxel-data/voxelWorldData";
-import {VoxelChunkWorldRendering, WorldChunksRenderingContext} from "../lib/voxel-render-core/voxelWorldChunksRenderer";
+import {VoxelChunkWorldRendering} from "../lib/voxel-render-core/voxelWorldChunksRenderer";
 import {clamp, signedModulo} from "../lib/utils/scalar";
 import {AsyncMultiResourceLoader} from "../lib/utils/loading/asyncMultiResourceLoader";
 import {makeTextureLoader} from "../lib/utils/loading/textureLoading";
 import VOXEL_TEXTURES_URL from "./voxel_textures.png";
-import {VoxelRayCaster} from "../lib/voxel-data/voxelRayCaster";
+import {FpsCameraController} from "../lib/voxel-render-core/fpsCameraController";
 
 // Setup canvas
 const canvas = document.createElement("canvas");
@@ -58,27 +58,21 @@ multi_resource_loader.promise
 
         // Define world
         class ExampleWorld {
+            private readonly camera = new FpsCameraController({
+                aspect: canvas.width / canvas.height,
+                clipping_near: 0.1,
+                clipping_far: 1000,
+                fov_rad: Math.PI * 0.7
+            }, {
+                yaw: 0,
+                pitch: 0,
+                origin: [0, 0, 4]
+            })
             public readonly voxel_world_data = new VoxelWorldData<ExampleChunk, number>();
             public readonly voxel_world_renderer: VoxelChunkWorldRendering;
 
             constructor(gl: GlCtx) {
-                this.voxel_world_renderer = new VoxelChunkWorldRendering(ExampleWorld.getChunkRenderCtx(gl), {
-                    clipping_near: 0.1,
-                    clipping_far: 1000,
-                    aspect: canvas.width / canvas.height,
-                    fov_rad: Math.PI * 0.7
-                }, {
-                    origin: [0.5, 0.5, 4],
-                    pitch: 0,  // horizontal
-                    yaw: 0     // vertical
-                });
-            }
-
-            private static getChunkRenderCtx(gl: GlCtx): WorldChunksRenderingContext {
-                return {
-                    gl,
-                    program: voxel_shader,
-                };
+                this.voxel_world_renderer = new VoxelChunkWorldRendering(gl, voxel_shader, this.camera);
             }
 
             makeChunk(gl: GlCtx, pos: vec3) {
@@ -88,18 +82,18 @@ multi_resource_loader.promise
             }
 
             lookRelative(rel: vec2, sensitivity: number) {
-                const {view_state} = this.voxel_world_renderer;
+                const {view_state} = this.camera;
                 view_state.pitch -= rel[0] * sensitivity;
                 view_state.yaw -= rel[1] * sensitivity;
                 view_state.pitch = signedModulo(view_state.pitch, Math.PI * 2);
                 view_state.yaw = clamp(view_state.yaw, -Math.PI / 2, Math.PI / 2);
-                this.voxel_world_renderer.updateViewOnGpu(ExampleWorld.getChunkRenderCtx(gl));
+                this.voxel_world_renderer.updateViewOnGpu(gl, voxel_shader);
             }
 
             tick(gl: GlCtx, keys_down: Set<string>) {
                 // Update
                 {
-                    const {view_state} = this.voxel_world_renderer;
+                    const {view_state} = this.camera;
 
                     // Generate horizontal heading
                     const heading: vec3 = [0, 0, 0];
@@ -123,14 +117,14 @@ multi_resource_loader.promise
                     vec3.scale(relative, relative, 0.25);
                     vec3.add(view_state.origin, view_state.origin, relative);
                     if (relative[0] !== 0 || relative[1] !== 0 || relative[2] !== 0)
-                        this.voxel_world_renderer.updateViewOnGpu(ExampleWorld.getChunkRenderCtx(gl));
+                        this.voxel_world_renderer.updateViewOnGpu(gl, voxel_shader);
                 }
 
                 // Render
                 gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
                 gl.clearColor(0.9, 0.9, 0.95, 1);
                 gl.enableVertexAttribArray(voxel_shader.attrib_vertex_data);
-                this.voxel_world_renderer.render<ExampleChunk>(ExampleWorld.getChunkRenderCtx(gl),
+                this.voxel_world_renderer.render<ExampleChunk>(gl, voxel_shader,
                     this.voxel_world_data.iterChunks(), chunk => chunk.pos);
                 gl.disableVertexAttribArray(voxel_shader.attrib_vertex_data);
             }
