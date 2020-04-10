@@ -60,14 +60,14 @@ multi_resource_loader.promise
         class ExampleWorld {
             private readonly camera = new FpsCameraController({
                 aspect: canvas.width / canvas.height,
-                clipping_near: 0.1,
+                clipping_near: 0.0001,
                 clipping_far: 1000,
                 fov_rad: Math.PI * 0.7
             }, {
                 yaw: 0,
                 pitch: 0,
                 origin: [0, 0, 4]
-            })
+            });
             public readonly voxel_world_data = new VoxelWorldData<ExampleChunk, number>();
             public readonly voxel_world_renderer: VoxelChunkWorldRendering;
 

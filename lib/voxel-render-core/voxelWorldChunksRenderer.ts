@@ -1,4 +1,4 @@
-import {mat4, vec3} from "gl-matrix";
+import {vec3} from "gl-matrix";
 import {GlCtx} from "../utils/typeSafety/aliases";
 import {ChunkRenderingShader} from "./defaultShaders";
 import {IVoxelChunkRendererWrapper} from "./voxelChunkRenderer";
